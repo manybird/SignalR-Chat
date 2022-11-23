@@ -1,5 +1,5 @@
 ﻿$message-bg-color: #f7f8fa;
-$mine-message-bg-color: #8abde6;
+$mine-message-bg-color: #bdf7fb; //#8abde6;
 $message-text-color: #333;
 $message-border-radius: 10px;
 $message-input-bg-color: #f5f5f5;
@@ -51,10 +51,24 @@ $message-input-bg-color: #f5f5f5;
     }
 }
 
+.message-item-system {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: center;
+    position: relative;
+
+    .message-content {
+        background-color: #fce8e8;
+        padding: 3px;
+        border-radius: $message-border-radius;
+    }
+}
+
 .message-item {
     margin-bottom: 12px;
     display: flex;
     justify-content: flex-start;
+    position: relative;
 
     .message-content {
         font-size: 16px;
@@ -65,13 +79,15 @@ $message-input-bg-color: #f5f5f5;
 
         .author {
             font-size: 14px;
-            font-weight: 500;
+            /*font-weight: 500;*/
             margin-right: 10px;
             white-space: nowrap;
+            color: grey;
         }
 
         .timestamp {
             font-size: 13px;
+            color: grey;
         }
 
         .content {
@@ -86,10 +102,30 @@ $message-input-bg-color: #f5f5f5;
             }
 
             .post-image {
-                width: 100%;
+                /*width: 100%;*/
                 border-radius: 2px;
             }
+
+            a {
+                div {                    
+                    overflow-wrap: break-word;
+                }
+            }
         }
+    }
+
+    .message-content:after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        width: 0;
+        height: 0;
+        border: 20px solid transparent;
+        border-right-color: $message-bg-color;
+        border-left: 0;
+        margin-top: -12px;
+        margin-right: 45px;
+        left: 40px;
     }
 
     .actions {
@@ -108,8 +144,16 @@ $message-input-bg-color: #f5f5f5;
         color: white;
 
         .content {
-            color: white;
+            /*color: white;*/
         }
+    }
+
+    .message-content:after {
+        border: 20px solid transparent;
+        border-left-color: $mine-message-bg-color;
+        border-right: 0;
+        left: unset;
+        right: 0;
     }
 
     .message-info {

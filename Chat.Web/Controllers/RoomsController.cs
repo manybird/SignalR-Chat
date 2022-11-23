@@ -12,35 +12,97 @@ using AutoMapper;
 using Chat.Web.Hubs;
 using Microsoft.AspNetCore.SignalR;
 using Chat.Web.ViewModels;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using System.Xml.Linq;
 
 namespace Chat.Web.Controllers
 {
     [Authorize]
+    //[AllowAnonymous]
     [Route("api/[controller]")]
     [ApiController]
-    public class RoomsController : ControllerBase
+    public class RoomsController : ControllerBaseExt
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IMapper _mapper;
-        private readonly IHubContext<ChatHub> _hubContext;
-
+        //private readonly ApplicationDbContext _context;
+        //private readonly IMapper _mapper;
+        //private readonly IHubContext<ChatHub> _hubContext;
+        
         public RoomsController(ApplicationDbContext context,
             IMapper mapper,
-            IHubContext<ChatHub> hubContext)
+            IHubContext<ChatHub> hubContext,
+            UserManager<ApplicationUser> userManager,
+            RoleManager<ApplicationRole> roleManager,
+            ITempDataDictionaryFactory tempDataFactory) : base(context, mapper, hubContext,userManager,roleManager)
         {
-            _context = context;
-            _mapper = mapper;
-            _hubContext = hubContext;
+           // _tempData = tempDataFactory.GetTempData(context.htt);
         }
 
-        [HttpGet]
+        [HttpGet()]
         public async Task<ActionResult<IEnumerable<RoomViewModel>>> Get()
         {
-            var rooms = await _context.Rooms.ToListAsync();
 
-            var roomsViewModel = _mapper.Map<IEnumerable<Room>, IEnumerable<RoomViewModel>>(rooms);
 
-            return Ok(roomsViewModel);
+            //if (_loginUser == null) return BadRequest("Invalid user");
+            ApplicationUser _loginUser = await GetUserByName(User.Identity.Name);
+            
+            if (_loginUser == null) return BadRequest("Invalid user at room controller!");
+            //object adminIdObj = TempData["adminId"];
+            //string adminId = null;
+
+            //if (adminIdObj != null) adminId = adminIdObj.ToString();
+
+            return await PostByAdminId(_loginUser.Id,true);
+        }
+
+
+
+        [AllowAnonymous]
+        [HttpGet("ByAdminId/{adminId}")]
+        public async Task<ActionResult<IEnumerable<RoomViewModel>>> PostByAdminId(string adminId, bool isFromIdentity = false)
+        {
+            //ApplicationUser _loginUser;
+            //await InitUser();
+
+            List<Room> rooms = new List<Room>();
+
+            try
+            {
+
+                if (string.IsNullOrEmpty(adminId))
+                {
+                    return BadRequest("Invalid user at room controller!");
+                }
+
+
+                rooms = await _context.Rooms.Include(r => r.Admin).Where(r => r.AdminId == adminId).ToListAsync();
+                if (rooms.Count > 0) rooms = rooms.Take(1).ToList();
+
+                if (isFromIdentity)
+                {
+                    if (rooms.Count == 0)
+                    {
+                        ApplicationUser _loginUser = await _userManager.FindByIdAsync(adminId);
+
+                        if (await _userManager.IsInRoleAsync(_loginUser, ApplicationRole.UserKey))
+                        {
+                            var room = await CreateNewRoom(_loginUser);
+                            rooms.Add(room);
+                        }
+
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                var ex1 = ex;
+            }
+
+
+            var roomsViewModels = _mapper.Map<IEnumerable<Room>, IEnumerable<RoomViewModel>>(rooms);
+
+            return Ok(roomsViewModels);
         }
 
         [HttpGet("{id}")]
@@ -50,29 +112,43 @@ namespace Chat.Web.Controllers
             if (room == null)
                 return NotFound();
 
+            
+
             var roomViewModel = _mapper.Map<Room, RoomViewModel>(room);
             return Ok(roomViewModel);
         }
-
+        
         [HttpPost]
         public async Task<ActionResult<Room>> Create(RoomViewModel roomViewModel)
         {
+            if (roomViewModel.OperationMode!=0) return BadRequest("Invalid Operation Mode!");
+
             if (_context.Rooms.Any(r => r.Name == roomViewModel.Name))
                 return BadRequest("Invalid room name or room already exists");
 
-            var user = _context.Users.FirstOrDefault(u => u.UserName == User.Identity.Name);
-            var room = new Room()
-            {
-                Name = roomViewModel.Name,
-                Admin = user
-            };
-
-            _context.Rooms.Add(room);
-            await _context.SaveChangesAsync();
-
+            //var user = _context.Users.FirstOrDefault(u => u.UserName == User.Identity.Name);
+            var _loginUser = await base.GetUserByName(User.Identity.Name);
+            var room = await CreateNewRoom( _loginUser, roomViewModel.Name);
+            
             await _hubContext.Clients.All.SendAsync("addChatRoom", new { id = room.Id, name = room.Name });
 
             return CreatedAtAction(nameof(Get), new { id = room.Id }, new { id = room.Id, name = room.Name });
+        }
+        private async Task< Room> CreateNewRoom(ApplicationUser user)
+        {
+            return await CreateNewRoom(user, user.UserName);
+        }
+        private async Task<Room> CreateNewRoom(ApplicationUser user, string roomName)
+        {
+            var room = new Room()
+            {
+                Name = roomName,
+                Admin = user
+            };
+            _context.Rooms.Add(room);
+            await _context.SaveChangesAsync();
+
+            return room;
         }
 
         [HttpPut("{id}")]

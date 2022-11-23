@@ -7,6 +7,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Data\Migrations\20221108042408_dataProtectionKeys.cs" />
+    <Compile Remove="Data\Migrations\20221108042408_dataProtectionKeys.Designer.cs" />
+    <Compile Remove="Data\Migrations\20221124075359_v1.cs" />
+    <Compile Remove="Data\Migrations\20221124075359_v1.Designer.cs" />
+    <Compile Remove="Data\Migrations\20221129101240_caseId_add_to_message.cs" />
+    <Compile Remove="Data\Migrations\20221129101240_caseId_add_to_message.Designer.cs" />
+    <Compile Remove="Data\Migrations\20221201040839_v2.cs" />
+    <Compile Remove="Data\Migrations\20221201040839_v2.Designer.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Content Remove="compilerconfig.json" />
   </ItemGroup>
 
@@ -30,6 +41,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="6.0.9" />
   </ItemGroup>
 

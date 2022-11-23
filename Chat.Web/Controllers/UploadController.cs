@@ -13,7 +13,9 @@ using Chat.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 
@@ -22,82 +24,131 @@ namespace Chat.Web.Controllers
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class UploadController : ControllerBase
+    public class UploadController : ControllerBaseExt
     {
-        private readonly int FileSizeLimit;
-        private readonly string[] AllowedExtensions;
-        private readonly ApplicationDbContext _context;
-        private readonly IMapper _mapper;
+        //private readonly int FileSizeLimit;
+        //private readonly string[] AllowedExtensions;
+        //private readonly ApplicationDbContext _context;
+        //private readonly IMapper _mapper;
         private readonly IWebHostEnvironment _environment;
-        private readonly IHubContext<ChatHub> _hubContext;
+        //private readonly IHubContext<ChatHub> _hubContext;
         private readonly IFileValidator _fileValidator;
 
         public UploadController(ApplicationDbContext context,
             IMapper mapper,
             IWebHostEnvironment environment,
             IHubContext<ChatHub> hubContext,
+            UserManager<ApplicationUser> userManager,
+            RoleManager<ApplicationRole> roleManager,
             IConfiguration configruation,
-            IFileValidator fileValidator)
+            IFileValidator fileValidator) : base(context, mapper, hubContext,userManager,roleManager)
         {
-            _context = context;
-            _mapper = mapper;
+            //_context = context;
+            //_mapper = mapper;
             _environment = environment;
-            _hubContext = hubContext;
+            //_hubContext = hubContext;
             _fileValidator = fileValidator;
+            //FileSizeLimit = configruation.GetSection("FileUpload").GetValue<int>("FileSizeLimit");
+            //AllowedExtensions = configruation.GetSection("FileUpload").GetValue<string>("AllowedExtensions").Split(",");
+        }
 
-            FileSizeLimit = configruation.GetSection("FileUpload").GetValue<int>("FileSizeLimit");
-            AllowedExtensions = configruation.GetSection("FileUpload").GetValue<string>("AllowedExtensions").Split(",");
+        private async Task<IActionResult> UploadAction([FromForm] UploadViewModel uploadViewModel, ApplicationUser user)
+        {
+            if (!ModelState.IsValid) return BadRequest();
+            if (!_fileValidator.IsValid(uploadViewModel.File))
+                return BadRequest("Validation failed!");
+
+            var room = _context.Rooms.Where(r => r.Id == uploadViewModel.RoomId).FirstOrDefault();
+            if (user == null || room == null)
+                return NotFound();
+
+            var now = DateTime.Now;
+            var oFileName = uploadViewModel.File.FileName;
+            var fileName = now.ToString("HHmmssf") + "_" + Path.GetFileName(oFileName);
+
+            var roomName = string.Join('_', room.Name.Split(Path.GetInvalidPathChars(), StringSplitOptions.RemoveEmptyEntries));
+
+            var folderPath = Path.Combine(_environment.WebRootPath, "uploads", roomName, now.ToString("yyyyMM"));
+            var fileFullPath = Path.Combine(folderPath, fileName);
+
+            var relativePath = fileFullPath.Replace(_environment.WebRootPath, "").Replace(Path.DirectorySeparatorChar, '/');
+
+            if (!Directory.Exists(folderPath))
+                Directory.CreateDirectory(folderPath);
+
+            using (var fileStream = new FileStream(fileFullPath, FileMode.Create))
+            {
+                await uploadViewModel.File.CopyToAsync(fileStream);
+            }
+
+            var ext = (Path.GetExtension(fileFullPath) ?? "").ToLower();
+
+
+
+            string iconPath = _getImageIcons(ext, relativePath);
+
+            
+
+            string htmlImage = string.Format(
+                "<a href='{0}' target='_blank'>" +
+                "<img src='{1}' class='post-image'>" +
+                "<div>{2}</div></a>", relativePath, iconPath,oFileName);
+
+            var message = new Message()
+            {
+                Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|div|/div|/img).*?>", string.Empty),
+                Timestamp = DateTime.Now,
+                FromUser = user,
+                ToRoom = room,
+                MessageType = 1,
+                FileFullPath = fileFullPath,
+                RelativePath = relativePath,
+            };
+
+            await _context.Messages.AddAsync(message);
+            await _context.SaveChangesAsync();
+
+            // Send image-message to group
+            var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+            await _hubContext.Clients.Group(room.Name).SendAsync("newMessage", messageViewModel);
+
+            return Ok();
+        }
+
+        private string _getImageIcons(string ext, string relativePath)
+        {
+            string iconPath = relativePath;
+            if (string.Equals(ext, ".pdf"))
+            {
+                iconPath = "/images/file-download-64.png";
+            }
+            else if (string.Equals(ext, ".jpg") || string.Equals(ext, ".jpeg") || string.Equals(ext, ".png"))
+            {
+                //imgPath = relativePath;
+                iconPath = "/images/image-64.png";
+            }
+            else
+            {
+                iconPath = "/images/file-download-64.png";
+            }
+
+            return iconPath;
         }
 
         [HttpPost]
         //[ValidateAntiForgeryToken]
         public async Task<IActionResult> Upload([FromForm] UploadViewModel uploadViewModel)
         {
-            if (ModelState.IsValid)
-            {
-                if (!_fileValidator.IsValid(uploadViewModel.File))
-                    return BadRequest("Validation failed!");
-
-                var fileName = DateTime.Now.ToString("yyyymmddMMss") + "_" + Path.GetFileName(uploadViewModel.File.FileName);
-                var folderPath = Path.Combine(_environment.WebRootPath, "uploads");
-                var filePath = Path.Combine(folderPath, fileName);
-                if (!Directory.Exists(folderPath))
-                    Directory.CreateDirectory(folderPath);
-
-                using (var fileStream = new FileStream(filePath, FileMode.Create))
-                {
-                    await uploadViewModel.File.CopyToAsync(fileStream);
-                }
-
-                var user = _context.Users.Where(u => u.UserName == User.Identity.Name).FirstOrDefault();
-                var room = _context.Rooms.Where(r => r.Id == uploadViewModel.RoomId).FirstOrDefault();
-                if (user == null || room == null)
-                    return NotFound();
-
-                string htmlImage = string.Format(
-                    "<a href=\"/uploads/{0}\" target=\"_blank\">" +
-                    "<img src=\"/uploads/{0}\" class=\"post-image\">" +
-                    "</a>", fileName);
-
-                var message = new Message()
-                {
-                    Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
-                    Timestamp = DateTime.Now,
-                    FromUser = user,
-                    ToRoom = room
-                };
-
-                await _context.Messages.AddAsync(message);
-                await _context.SaveChangesAsync();
-
-                // Send image-message to group
-                var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
-                await _hubContext.Clients.Group(room.Name).SendAsync("newMessage", messageViewModel);
-
-                return Ok();
-            }
-
-            return BadRequest();
+            var user = await base.GetUserByName(User.Identity.Name);
+            return await UploadAction(uploadViewModel, user);
+        }
+        
+        [AllowAnonymous]
+        [HttpPost("ByAgent/{na1ta}")]
+        public async Task<IActionResult> Upload([FromForm] UploadViewModel uploadViewModel, string na1ta)
+        {
+            var user = await base.GetUserByName(na1ta);
+            return await UploadAction(uploadViewModel, user);
         }
     }
 }

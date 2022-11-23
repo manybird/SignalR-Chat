@@ -12,5 +12,25 @@ namespace Chat.Web.ViewModels
         public string Avatar { get; set; }
         public string CurrentRoom { get; set; }
         public string Device { get; set; }
+
+        public int IsUserVisiting { get; set; }
+                
+        internal static UserViewModel ByUserName(string identityName)
+        {
+            return new UserViewModel()
+            {
+                Username = identityName,
+                FullName = identityName + "@",
+            };
+        }
+
+
+    }
+    public class UserViewModelExt:UserViewModel
+    {
+        public string ConnectionId { get; set; }
+        public string AdminId { get; set; }
+
+        public string CaseId { get; set; }
     }
 }

@@ -1,3 +1,17 @@
+﻿.divUserRequestState {
+  background: #bdf7f1;
+  margin: 3px;
+  padding: 5px 8px;
+  font-size: 14px;
+}
+.divUserRequestState .divUserRequestStateRow {
+  display: flex;
+  justify-content: space-between;
+  min-height: 16px;
+  margin: 2px;
+  padding: 2px;
+}
+
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -14,6 +28,15 @@
 }
 .sidebar svg:hover {
   color: white;
+}
+.sidebar .userAction {
+  margin: 3px;
+  padding: 3px;
+}
+.sidebar .userAction span {
+  cursor: pointer;
+  border-bottom: 1px solid #fff;
+  padding-bottom: 2px;
 }
 .sidebar .header {
   display: flex;
@@ -64,7 +87,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 180px;
+  max-width: 150px;
 }
 .sidebar .profile .btn-sign-out {
   background: none;
@@ -112,10 +135,23 @@
   transform: translate(-50%);
 }
 
+.message-item-system {
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+}
+.message-item-system .message-content {
+  background-color: #fce8e8;
+  padding: 3px;
+  border-radius: 10px;
+}
+
 .message-item {
   margin-bottom: 12px;
   display: flex;
   justify-content: flex-start;
+  position: relative;
 }
 .message-item .message-content {
   font-size: 16px;
@@ -126,12 +162,14 @@
 }
 .message-item .message-content .author {
   font-size: 14px;
-  font-weight: 500;
+  /*font-weight: 500;*/
   margin-right: 10px;
   white-space: nowrap;
+  color: grey;
 }
 .message-item .message-content .timestamp {
   font-size: 13px;
+  color: grey;
 }
 .message-item .message-content .content {
   margin-top: 2px;
@@ -144,8 +182,24 @@
   object-fit: contain;
 }
 .message-item .message-content .content .post-image {
-  width: 100%;
+  /*width: 100%;*/
   border-radius: 2px;
+}
+.message-item .message-content .content a div {
+  overflow-wrap: break-word;
+}
+.message-item .message-content:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border: 20px solid transparent;
+  border-right-color: #f7f8fa;
+  border-left: 0;
+  margin-top: -12px;
+  margin-right: 45px;
+  left: 40px;
 }
 .message-item .actions svg {
   width: 16px !important;
@@ -156,11 +210,18 @@
   flex-direction: row-reverse;
 }
 .ismine .message-content {
-  background: #8abde6;
+  background: #bdf7fb;
   color: white;
 }
 .ismine .message-content .content {
-  color: white;
+  /*color: white;*/
+}
+.ismine .message-content:after {
+  border: 20px solid transparent;
+  border-left-color: #bdf7fb;
+  border-right: 0;
+  left: unset;
+  right: 0;
 }
 .ismine .message-info {
   flex-direction: row-reverse;
@@ -265,6 +326,7 @@
   flex-direction: column;
   flex-grow: 1;
   overflow: hidden;
+  background-color: #f9efef;
 }
 #users-list .user .user-info span {
   display: block;
@@ -469,8 +531,11 @@ body {
   background: white;
 }
 .app .sidebar {
-  width: 270px;
-  min-width: 270px;
+  /*width: 270px;
+  min-width: 270px;*/
+  /*min-width: unset;
+  width: unset;*/
+  margin: 9px 4px;
 }
 .app .main-content {
   flex-grow: 1;
@@ -479,5 +544,6 @@ body {
   width: 250px;
   min-width: 250px;
 }
-
-/*# sourceMappingURL=site.css.map */
+.app .agents-container {
+  max-width: 150px;
+}

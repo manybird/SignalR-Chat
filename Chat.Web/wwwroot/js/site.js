@@ -1,5 +1,6 @@
 ﻿$(function () {
     $('ul#users-list').on('click', 'li', function () {
+        return;
         var username = $(this).data("username");
         var input = $('#message-input');
 
@@ -65,4 +66,7 @@
     $(document).on("hidden.bs.dropdown", ".actions .dropdown", function () {
         $(this).closest(".actions").addClass("d-none");
     });
+
+    
 });
+

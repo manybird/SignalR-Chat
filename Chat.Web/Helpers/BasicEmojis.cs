@@ -9,6 +9,8 @@ namespace Chat.Web.Helpers
     {
         public static string ParseEmojis(string content)
         {
+            if (content == null) return null;
+
             content = content.Replace(":)", Img("emoji1.png"));
             content = content.Replace(":P", Img("emoji2.png"));
             content = content.Replace(":O", Img("emoji3.png"));

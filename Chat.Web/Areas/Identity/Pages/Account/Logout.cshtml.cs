@@ -23,8 +23,22 @@ namespace Chat.Web.Areas.Identity.Pages.Account
             _logger = logger;
         }
 
-        public void OnGet()
+        public async Task<IActionResult> OnGet(string returnUrl=null)
         {
+            bool hasUserSigned = !string.IsNullOrEmpty(User.Identity.Name);
+
+            await _signInManager.SignOutAsync();
+            //_logger.LogInformation("User logged out :{0}", User.Identity.Name);
+            if (returnUrl != null)
+            {
+                return LocalRedirect(returnUrl);
+            }
+            else if (hasUserSigned)
+            {
+                return Content("Logout completed!");                
+            }
+            
+            return Content("No user need to logout!");
         }
 
         public async Task<IActionResult> OnPost(string returnUrl = null)

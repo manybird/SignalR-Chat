@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Chat.Web.Data;
@@ -13,25 +12,24 @@ using Microsoft.AspNetCore.SignalR;
 using Chat.Web.Hubs;
 using Chat.Web.ViewModels;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Identity;
+using Chat.Web.MiccSdk;
+using Chat.Web.Helpers;
 
 namespace Chat.Web.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class MessagesController : ControllerBase
+    public class MessagesController : ControllerBaseExt
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IMapper _mapper;
-        private readonly IHubContext<ChatHub> _hubContext;
+        private readonly Micc _micc;
 
         public MessagesController(ApplicationDbContext context,
-            IMapper mapper,
-            IHubContext<ChatHub> hubContext)
-        {
-            _context = context;
-            _mapper = mapper;
-            _hubContext = hubContext;
+            IMapper mapper, IHubContext<ChatHub> hubContext,
+            UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager,Micc micc) 
+            : base(context, mapper, hubContext, userManager, roleManager) {
+            _micc = micc;
         }
 
         [HttpGet("{id}")]
@@ -45,18 +43,45 @@ namespace Chat.Web.Controllers
             return Ok(messageViewModel);
         }
 
-        [HttpGet("Room/{roomName}")]
-        public IActionResult GetMessages(string roomName)
+        
+        [HttpGet("Room/{roomName}/{caseId}")]
+        public IActionResult GetMessagesA(string roomName,string caseId)
+        {
+            return GetMessagesInner(roomName, caseId);
+        }
+        
+        [HttpGet("Room/{roomName}/{caseId}/{take}")]
+        public IActionResult GetMessagesA(string roomName, string caseId, int take)
+        {
+            return GetMessagesInner(roomName, caseId, take);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("RoomB/{roomName}/{caseId}")]
+        public IActionResult GetMessagesB(string roomName, string caseId)
+        {
+            return GetMessagesInner(roomName, caseId);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("RoomB/{roomName}/{caseId}/{take}")]
+        public IActionResult GetMessagesB(string roomName, string caseId, int take)
+        {
+            return GetMessagesInner(roomName, caseId, take);
+        }
+                
+        private IActionResult GetMessagesInner(string roomName,string caseId,int take=1000)
         {
             var room = _context.Rooms.FirstOrDefault(r => r.Name == roomName);
             if (room == null)
                 return BadRequest();
 
-            var messages = _context.Messages.Where(m => m.ToRoomId == room.Id)
+            var messages = _context.Messages.Where(m => m.ToRoomId == room.Id && m.CaseId == caseId)
                 .Include(m => m.FromUser)
                 .Include(m => m.ToRoom)
+                //.Include(m=>m.Case)
                 .OrderByDescending(m => m.Timestamp)
-                .Take(20)
+                .Take(take)
                 .AsEnumerable()
                 .Reverse()
                 .ToList();
@@ -69,7 +94,23 @@ namespace Chat.Web.Controllers
         [HttpPost]
         public async Task<ActionResult<Message>> Create(MessageViewModel messageViewModel)
         {
-            var user = _context.Users.FirstOrDefault(u => u.UserName == User.Identity.Name);
+            var user = await base.GetUserByName(User.Identity.Name);
+            return await CreateMessageInner(messageViewModel,user);
+        }
+
+        
+
+        [AllowAnonymous]
+        [HttpPost("ByAgent/{na1ta}")]
+        public async Task<ActionResult<Message>> CreateByAgent(MessageViewModel messageViewModel,string na1ta)
+        {
+            var user = await base.GetUserByName(na1ta);
+            return await CreateMessageInner(messageViewModel,user);
+        }
+
+        private async Task<ActionResult<Message>> CreateMessageInner(MessageViewModel messageViewModel, ApplicationUser user)
+        {
+
             var room = _context.Rooms.FirstOrDefault(r => r.Name == messageViewModel.Room);
             if (room == null)
                 return BadRequest();
@@ -79,7 +120,8 @@ namespace Chat.Web.Controllers
                 Content = Regex.Replace(messageViewModel.Content, @"<.*?>", string.Empty),
                 FromUser = user,
                 ToRoom = room,
-                Timestamp = DateTime.Now
+                Timestamp = DateTime.Now,
+                CaseId = messageViewModel.CaseId,
             };
 
             _context.Messages.Add(msg);
@@ -110,5 +152,7 @@ namespace Chat.Web.Controllers
 
             return Ok();
         }
+       
+
     }
 }

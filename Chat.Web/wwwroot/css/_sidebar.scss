@@ -1,5 +1,21 @@
 ﻿$bg-color: #157cce;
 $text-color: rgba(white, 0.85);
+$user-request-container-bg-color: #bdf7f1; //#8abde6;
+
+.divUserRequestState {
+    background: $user-request-container-bg-color;
+    margin: 3px;
+    padding: 5px 8px;
+    font-size: 14px;
+
+    .divUserRequestStateRow {
+        display: flex;
+        justify-content: space-between;
+        min-height: 16px;
+        margin: 2px;
+        padding: 2px 
+    }
+}
 
 .sidebar {
     display: flex;
@@ -20,6 +36,19 @@ $text-color: rgba(white, 0.85);
             color: white;
         }
     }
+
+    .userAction {
+        margin: 3px;
+        padding: 3px;
+
+        span {
+            cursor: pointer;
+            border-bottom: 1px solid #fff;
+            padding-bottom: 2px;
+        }
+    }
+
+
 
     .header {
         display: flex;
@@ -79,7 +108,7 @@ $text-color: rgba(white, 0.85);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 180px;
+            max-width: 150px;
         }
 
         .btn-sign-out {

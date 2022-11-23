@@ -9,7 +9,9 @@ namespace Chat.Web.Models
     {
         public int Id { get; set; }
         public string Name { get; set; }
+        public string AdminId { get; set; }
         public ApplicationUser Admin { get; set; }
         public ICollection<Message> Messages { get; set; }
+            
     }
 }

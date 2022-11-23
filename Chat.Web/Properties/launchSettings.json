@@ -9,17 +9,29 @@
     },
     "Chat.Web": {
       "commandName": "Project",
-      "dotnetRunMessages": true,
       "launchBrowser": true,
-      "applicationUrl": "https://localhost:5001;http://localhost:5000",
       "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT2": "Production",
         "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "dotnetRunMessages": true,
+      "applicationUrl2": "http://192.168.1.250:5000;https://localhost:5001;",
+      "applicationUrl": "https://localhost:5001;https://192.168.0.121:5001;https://192.168.1.250:5001;http://192.168.1.250:5000;"
+    },
+    "IIS2": {
+      "commandName": "IIS",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Test"
       }
     }
   },
   "iisSettings": {
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
+    "iis": {
+      "applicationUrl": "http://localhost:81",
+      "sslPort": 0
+    },
     "iisExpress": {
       "applicationUrl": "http://localhost:60326",
       "sslPort": 44354

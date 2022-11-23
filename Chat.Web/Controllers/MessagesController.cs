@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Chat.Web.Data;
@@ -13,25 +12,23 @@ using Microsoft.AspNetCore.SignalR;
 using Chat.Web.Hubs;
 using Chat.Web.ViewModels;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Identity;
+using Chat.Web.MiccSdk;
 
 namespace Chat.Web.Controllers
 {
     [Authorize]
     [Route("api/[controller]")]
     [ApiController]
-    public class MessagesController : ControllerBase
+    public class MessagesController : ControllerBaseExt
     {
-        private readonly ApplicationDbContext _context;
-        private readonly IMapper _mapper;
-        private readonly IHubContext<ChatHub> _hubContext;
+        private readonly Micc _micc;
 
         public MessagesController(ApplicationDbContext context,
-            IMapper mapper,
-            IHubContext<ChatHub> hubContext)
-        {
-            _context = context;
-            _mapper = mapper;
-            _hubContext = hubContext;
+            IMapper mapper, IHubContext<ChatHub> hubContext,
+            UserManager<ApplicationUser> userManager, RoleManager<ApplicationRole> roleManager,Micc micc) 
+            : base(context, mapper, hubContext, userManager, roleManager) {
+            _micc = micc;
         }
 
         [HttpGet("{id}")]
@@ -45,8 +42,16 @@ namespace Chat.Web.Controllers
             return Ok(messageViewModel);
         }
 
+        [AllowAnonymous]
         [HttpGet("Room/{roomName}")]
         public IActionResult GetMessages(string roomName)
+        {
+            return GetMessages(roomName, 100);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("Room/{roomName}/{take}")]
+        public IActionResult GetMessages(string roomName,int take=100)
         {
             var room = _context.Rooms.FirstOrDefault(r => r.Name == roomName);
             if (room == null)
@@ -56,7 +61,7 @@ namespace Chat.Web.Controllers
                 .Include(m => m.FromUser)
                 .Include(m => m.ToRoom)
                 .OrderByDescending(m => m.Timestamp)
-                .Take(20)
+                .Take(take)
                 .AsEnumerable()
                 .Reverse()
                 .ToList();
@@ -69,7 +74,13 @@ namespace Chat.Web.Controllers
         [HttpPost]
         public async Task<ActionResult<Message>> Create(MessageViewModel messageViewModel)
         {
-            var user = _context.Users.FirstOrDefault(u => u.UserName == User.Identity.Name);
+            var user = await base.GetUserByName(User.Identity.Name);
+            return await CreateMessageResult(messageViewModel,user);
+        }
+
+        private async Task<ActionResult<Message>> CreateMessageResult(MessageViewModel messageViewModel, ApplicationUser user)
+        {
+            
             var room = _context.Rooms.FirstOrDefault(r => r.Name == messageViewModel.Room);
             if (room == null)
                 return BadRequest();
@@ -92,6 +103,15 @@ namespace Chat.Web.Controllers
             return CreatedAtAction(nameof(Get), new { id = msg.Id }, createdMessage);
         }
 
+
+        [AllowAnonymous]
+        [HttpPost("ByAgent/{na1ta}")]
+        public async Task<ActionResult<Message>> CreateByAgent(MessageViewModel messageViewModel,string na1ta)
+        {
+            var user = await base.GetUserByName(na1ta);
+            return await CreateMessageResult(messageViewModel,user);
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -110,5 +130,7 @@ namespace Chat.Web.Controllers
 
             return Ok();
         }
+       
+
     }
 }

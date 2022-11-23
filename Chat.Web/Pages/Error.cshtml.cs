@@ -10,9 +10,15 @@ using Microsoft.Extensions.Logging;
 namespace Chat.Web.Pages
 {
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-    public class ErrorModel : PageModel
+    public class ErrorModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
     {
         public string RequestId { get; set; }
+
+        
+        public string AdminId { get; set; }
+        public int? Id2 { get; set; }
+
+        public ICollection<string> Items { get; set; }
 
         public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
 
@@ -23,9 +29,22 @@ namespace Chat.Web.Pages
             _logger = logger;
         }
 
-        public void OnGet()
+              
+
+        public void OnGet(string adminId,int? id2)
         {
+            this.AdminId = adminId;
+            Id2 = id2;
             RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+            _logger.Log(LogLevel.Trace,"RequestId: {0}", RequestId);
+
+            Items = new List<string>();
+
+            for(var i=1;i < 10; i++)
+            {
+                Items.Add(String.Format("Items: {0}", i));
+            }
+
         }
     }
 }

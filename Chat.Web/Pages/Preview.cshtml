@@ -1,0 +1,61 @@
+﻿@page "{adminId?}/{take:int?}"
+@model PreviewModel
+@{
+    ViewData["Title"] = "Preview";
+}
+<style>
+    .app{
+        flex-direction:column;
+    }
+
+    .message-item .message-content {
+        max-width:80%;
+    }
+    .message-item .message-content:after{
+        border:0px;
+    }
+</style>
+<div class="app">
+
+    @if (!string.IsNullOrEmpty(Model.msg))
+    {
+
+        <h4 class="text-danger">@Model.msg</h4>
+    }
+
+    @if (Model.AppUser != null && Model.Take==null)
+    {
+        <div class="vw-100 font-monospace fs-6 p-1" >
+            <div>
+                <div class="d-inline-block" style="width:80px;"><strong>Name:</strong></div> <label>@Model.AppUser.FullName (@Model.AppUser.UserName)</label>
+            </div>
+            <div>
+                <div class="d-inline-block" style="width:80px;"><strong style="width:80px">Email:</strong></div> <label>@Model.AppUser.Email</label>
+            </div>
+        </div>
+    }
+    <div class="main-content">
+        <div class="messages-container position-relative">
+            <ul class="list-unstyled" id="messages-list">
+                @foreach (var m in Model.Messages)
+                {
+                    <li>                        
+                        <div class="message-item @(!m.IsFromUserRole ? "ismine" :"")">                                                        
+                            <div class="message-content">
+                                <div class="message-info d-flex flex-wrap align-items-center">
+                                    <span class="author" >@m.FromUser</span>
+                                    <span class="timestamp" >@m.Timestamp</span>
+                                </div>
+                                <div class="content">
+                                    @Html.Raw(@m.Content)                                    
+                                </div>
+                            </div>                            
+                        </div>
+                    </li>                
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+

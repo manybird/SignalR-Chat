@@ -20,6 +20,10 @@ namespace Chat.Web.Mappings
                 .ForMember(dst => dst.Content, opt => opt.MapFrom(x => BasicEmojis.ParseEmojis(x.Content)));
 
             CreateMap<MessageViewModel, Message>();
+
+            CreateMap<Message, MessageExt>();
+
+            CreateMap<MessageExt, Message>();
         }
     }
 }

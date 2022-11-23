@@ -15,8 +15,11 @@ body {
     background: white;
 
     .sidebar {
-        width: 270px;
-        min-width: 270px;
+        /*width: 270px;
+        min-width: 270px;*/
+        /*min-width: unset;
+        width: unset;*/
+        margin:9px 4px;
     }
 
     .main-content {
@@ -27,4 +30,6 @@ body {
         width: 250px;
         min-width: 250px;
     }
+
+    
 }

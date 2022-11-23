@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Chat.Web.Pages
 {
-    public class PrivacyModel : PageModel
+    public class PrivacyModel : Microsoft.AspNetCore.Mvc.RazorPages.PageModel
     {
         private readonly ILogger<PrivacyModel> _logger;
 

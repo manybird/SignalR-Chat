@@ -2,26 +2,31 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Chat.Web.Models;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
 
 namespace Chat.Web.Pages
 {
-    [Authorize]
+    [Authorize]    
     public class IndexModel : PageModel
     {
         private readonly ILogger<IndexModel> _logger;
-
-        public IndexModel(ILogger<IndexModel> logger)
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        public IndexModel(SignInManager<ApplicationUser> signInManager,
+            ILogger<IndexModel> logger,
+            UserManager<ApplicationUser> userManager)
         {
             _logger = logger;
+            _signInManager = signInManager;
         }
 
-        public void OnGet()
+        public void OnGet(string adminId)
         {
-
+            TempData["adminId"] = adminId;
         }
     }
 }

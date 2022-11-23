@@ -21,6 +21,17 @@ namespace Chat.Web
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
+                    return;
+                    //webBuilder.UseUrls("https://localhost:5051","http://localhost:5050");
+                    //webBuilder.UseKestrel(opts =>
+                    //{
+                    //    opts.ListenAnyIP(5001, opts2 =>
+                    //    {
+                    //        opts2.UseHttps();
+                    //    });
+                    //});
+
+
                 });
     }
 }

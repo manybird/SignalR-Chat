@@ -13,5 +13,14 @@ namespace Chat.Web.Models
         public ApplicationUser FromUser { get; set; }
         public int ToRoomId { get; set; }
         public Room ToRoom { get; set; }
+
+        public int MessageType { get; set; }    
+        public string FileFullPath { get; set; }
+        public string RelativePath { get; set; }
+    }
+
+    public class MessageExt:Message
+    {
+        public bool IsFromUserRole { get; set; }
     }
 }

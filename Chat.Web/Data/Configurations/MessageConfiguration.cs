@@ -14,7 +14,7 @@ namespace Chat.Web.Data.Configurations
         {
             builder.ToTable("Messages");
 
-            builder.Property(s => s.Content).IsRequired().HasMaxLength(500);
+            builder.Property(s => s.Content).IsRequired().HasMaxLength(2000);
 
             builder.HasOne(s => s.ToRoom)
                 .WithMany(m => m.Messages)

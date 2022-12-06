@@ -1,5 +1,11 @@
-﻿Add-Migration
+﻿To Add Migration
+Add-Migration
 Update-Database
+
+To Revert Migration
+Update-Database <LastGoodMigrationName e.g.:'save_file_info'>
+Remove-Migration
+
 
 In Visual Studio, you can use the Package Manager Console to apply pending migrations to the database:
 

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Chat.Web.Pages
@@ -22,6 +23,7 @@ namespace Chat.Web.Pages
     {
         private readonly ILogger<AgentViewModel> _logger;
 
+        public string CaseId { get; set; }
         public string AdminId { get; set; }
         public string Na1ta { get; set; }
 
@@ -33,7 +35,7 @@ namespace Chat.Web.Pages
             _logger = logger;
         }
 
-        public async Task<IActionResult> OnGet(string adminId)
+        public async Task<IActionResult> OnGet(string adminId, string caseId)
         {
             
 
@@ -50,7 +52,7 @@ namespace Chat.Web.Pages
             }
             
             var runner = new MiccRunner(_micc);
-            var r = await runner.GetOpenMediaConversationById(adminId);
+            var r = await runner.GetConversationById(caseId);
 
             //string url;
             if (!r.IsSuccess)
@@ -60,6 +62,7 @@ namespace Chat.Web.Pages
 
             Na1ta = r.AgentReporting;
             AdminId = adminId;
+            CaseId = caseId;
             
             if (string.IsNullOrEmpty(Na1ta))
                 return Content("Na1ta empty!");
@@ -71,19 +74,50 @@ namespace Chat.Web.Pages
             {
                 appUser = ApplicationUser.FromUserName(Na1ta);
                 var result = await _userManager.CreateAsync(appUser);
-                if (result.Succeeded)
+                if (!result.Succeeded)               
                 {
-                    return Content("Error create user fail: " + Na1ta);
-                }
-                else if (result.Errors != null)
-                {
-                    return Content("Error: " + result.Errors);
+                    string s = "Error create user: " + Na1ta + " ";
+
+                    if (result.Errors != null)
+                    {
+                        foreach (var e in result.Errors)
+                        {
+                            s = s + e.Code + ":" + e.Description + "; ";
+                        }
+
+                    }
+                    _logger.LogError(s);
+                    return Content(s);
                 }
             }
 
+            if ((!string.Equals(appUser.FullName, r.AgentName)) && !string.IsNullOrEmpty(r.AgentName))
+            {
+                appUser.FullName = r.AgentName;
+                await _context.SaveChangesAsync();
+            }
+
+            if (!string.IsNullOrEmpty(caseId))
+            {
+                var c1 = await _context.Cases.FirstOrDefaultAsync(r => r.Id == caseId);
+
+                if (c1 == null)
+                {
+                    return Content("Get case fail for caseId: " + caseId);
+                }
+                else
+                {                   
+
+                    c1.AgentReporting = r.AgentReporting;
+                    c1.AgentName = r.AgentName;
+                    c1.MiccCaseId = r.CaseId;
+                    c1.AgentJoinDate = DateTime.Now;
+                    await _context.SaveChangesAsync();
+                }
+                
+            }
 
             //await _signInManager.SignInAsync(appUser, false);
-
 
             //return Content("1");
 

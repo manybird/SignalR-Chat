@@ -7,6 +7,7 @@
         public override bool IsSuccess => IsSuccessStatusCode && _embedded != null;
         public ResponseResultEmbedded<ResponseResultConversionQueueItem> _embedded { get; set; }
 
+        
     }
 
     public class ResponseResultConversionQueueItem

@@ -19,7 +19,7 @@ body {
         min-width: 270px;*/
         /*min-width: unset;
         width: unset;*/
-        margin:9px 4px;
+        margin: 9px 4px;
     }
 
     .main-content {
@@ -31,5 +31,7 @@ body {
         min-width: 250px;
     }
 
-    
+    .agents-container {        
+        max-width: 150px;
+    }
 }

@@ -13,10 +13,11 @@ using System.Net.Security;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Xml.Linq;
 using System.Net;
+using Chat.Web.MiccSdk.Conversation;
 
 namespace Chat.Web.MiccSdk
 {
-    public class MiccRunner:IDisposable
+    public class MiccRunner : IDisposable
     {
         public readonly Micc micc;
         private HttpClientHandler _clientHandler;// = new HttpClientHandler();
@@ -24,7 +25,7 @@ namespace Chat.Web.MiccSdk
 
         public MiccRunner(Micc _micc)
         {
-            this.micc= _micc ?? throw new ArgumentNullException(nameof(_micc));
+            this.micc = _micc ?? throw new ArgumentNullException(nameof(_micc));
             _clientHandler = new HttpClientHandler();
             _clientHandler.ServerCertificateCustomValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
             _client = new HttpClient(_clientHandler);
@@ -63,7 +64,7 @@ namespace Chat.Web.MiccSdk
 
                 if (rep.IsSuccessStatusCode)
                 {
-                    result = JsonConvert.DeserializeObject<ResponseResultServerStatus>(body);                    
+                    result = JsonConvert.DeserializeObject<ResponseResultServerStatus>(body);
                 }
                 else if (rep.StatusCode == System.Net.HttpStatusCode.BadRequest)
                 {
@@ -93,7 +94,7 @@ namespace Chat.Web.MiccSdk
             {
                 var r = await CheckServerStatus();
                 if (r.IsSuccess)
-                {                    
+                {
                     result.StatusCode = r.StatusCode;
                     result.Access_token = micc.AuthorizationToken;
                     return result; //Keep using it token if it is still valid
@@ -138,7 +139,7 @@ namespace Chat.Web.MiccSdk
                 result.ResponseCode = rep.StatusCode.ToString();
                 result.StatusCode = (int)rep.StatusCode;
 
-                if (result.IsSuccess) micc.lastCheckSignIn = DateTime.Now;                
+                if (result.IsSuccess) micc.lastCheckSignIn = DateTime.Now;
 
             }
             catch (Exception ex)
@@ -148,11 +149,11 @@ namespace Chat.Web.MiccSdk
             return result;
         }
 
-        
 
-        public async Task<ResponseResultConversation> PostOpenMediaConversation(string chatId, string name, string email)
+
+        public async Task<ResponseResultOpenMediaConversation> PostOpenMediaConversation(string chatId, string caseId, string name, string email)
         {
-            var result = new ResponseResultConversation();
+            var result = new ResponseResultOpenMediaConversation();
 
             if (micc.shouldCheckSignIn())
             {
@@ -162,9 +163,9 @@ namespace Chat.Web.MiccSdk
                     result.CopyHttpResult(r);
                     return result;
                 }
-            }            
+            }
 
-            OpenMediaRequestBody requestBody = micc.NewOpenMediaRequest(chatId, name, email);
+            OpenMediaRequestBody requestBody = micc.NewOpenMediaRequest(chatId, caseId, name, email);
             try
             {
 
@@ -186,11 +187,11 @@ namespace Chat.Web.MiccSdk
 
                     if (rep.IsSuccessStatusCode)
                     {
-                        result = JsonConvert.DeserializeObject<ResponseResultConversation>(body);
+                        result = JsonConvert.DeserializeObject<ResponseResultOpenMediaConversation>(body);
                     }
                     else if (rep.StatusCode == System.Net.HttpStatusCode.BadRequest || rep.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     {
-                        result = JsonConvert.DeserializeObject<ResponseResultConversation>(body);
+                        result = JsonConvert.DeserializeObject<ResponseResultOpenMediaConversation>(body);
                     }
                     else
                     {
@@ -212,12 +213,12 @@ namespace Chat.Web.MiccSdk
         }
 
 
-        public async Task<ResponseResultConversation> GetOpenMediaConversationById(string adminId)
+        public async Task<ResponseResultOpenMediaConversation> GetOpenMediaConversationById(string adminId)
         {
-            var result = new ResponseResultConversation();
+            var result = new ResponseResultOpenMediaConversation();
 
             var r = await SignInMicc();
-            if (!r.IsSuccess) 
+            if (!r.IsSuccess)
             {
                 result.CopyHttpResult(r);
                 return result;
@@ -229,7 +230,7 @@ namespace Chat.Web.MiccSdk
                 var request = new HttpRequestMessage()
                 {
                     Method = HttpMethod.Get,
-                    RequestUri = new Uri( micc.UrlOpenMediaById(adminId)),
+                    RequestUri = new Uri(micc.UrlOpenMediaById(adminId)),
                     //Content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, MediaTypeNames.Application.Json)
 
                 };
@@ -244,12 +245,12 @@ namespace Chat.Web.MiccSdk
 
                     if (rep.IsSuccessStatusCode)
                     {
-                        result = JsonConvert.DeserializeObject<ResponseResultConversation>(body);
+                        result = JsonConvert.DeserializeObject<ResponseResultOpenMediaConversation>(body);
                     }
-                    else if (rep.StatusCode ==HttpStatusCode.BadRequest || rep.StatusCode == HttpStatusCode.Unauthorized)
+                    else if (rep.StatusCode == HttpStatusCode.BadRequest || rep.StatusCode == HttpStatusCode.Unauthorized)
                     {
-                        result = JsonConvert.DeserializeObject<ResponseResultConversation>(body);
-                    }                   
+                        result = JsonConvert.DeserializeObject<ResponseResultOpenMediaConversation>(body);
+                    }
                     else
                     {
                         result.ResponseBody = body;
@@ -270,6 +271,76 @@ namespace Chat.Web.MiccSdk
             {
                 result.SetException(ex);
             }
+
+            return result;
+        }
+
+        public async Task<ResponseResultConversation> GetConversationById(string adminId)
+        {
+            return await MiccGet<ResponseResultConversation>(micc.UrlConversationById(adminId));
+        }
+
+        public async Task<ResponseResultConversations> GetConversationsById(string adminId)
+        {
+            return await MiccGet<ResponseResultConversations>(micc.UrlConversationById(adminId));
+        }
+        public async Task<T> MiccGet<T>(string url) where T : ResponseResult
+        {
+            T result = (T)Activator.CreateInstance(typeof(T));
+
+            var r = await SignInMicc();
+            if (!r.IsSuccess)
+            {
+                result.CopyHttpResult(r);
+                return result;
+            }
+
+            try
+            {
+
+                var request = new HttpRequestMessage()
+                {
+                    Method = HttpMethod.Get,
+                    //RequestUri = new Uri(micc.UrlConversationById(adminId)),
+                    RequestUri = new Uri(url),
+                };
+
+                AddTokenToHeader();
+
+                using (HttpResponseMessage rep = await _client.SendAsync(request))
+                {
+                    var body = await rep.Content.ReadAsStringAsync();
+
+                    if (rep.IsSuccessStatusCode)
+                    {
+                        result = JsonConvert.DeserializeObject<T>(body);
+                    }
+                    else if (rep.StatusCode == HttpStatusCode.BadRequest || rep.StatusCode == HttpStatusCode.Unauthorized)
+                    {
+                        result = JsonConvert.DeserializeObject<T>(body);
+                    }
+                    else
+                    {
+                        result.ResponseBody = body;
+                    }
+                    result.ResponseCode = rep.StatusCode.ToString();
+                    result.ResponseBody = body;
+                    result.StatusCode = (int)rep.StatusCode;
+
+                    if (rep.StatusCode == HttpStatusCode.NotFound)
+                    {
+                        result.Error = result.ToString();
+                    }
+                    result.SetChildStatus();
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                result.SetException(ex);
+            }
+
 
             return result;
         }

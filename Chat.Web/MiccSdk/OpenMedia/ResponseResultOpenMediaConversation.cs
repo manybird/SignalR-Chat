@@ -1,17 +1,27 @@
-﻿using System;
+﻿using Chat.Web.MiccSdk.Conversation;
+using System;
+using System.Collections.Generic;
 
 namespace Chat.Web.MiccSdk.OpenMedia
 {
-    public class ResponseResultConversations : ResponseResult
-    {
-        #region "Open media list / queue list"
+    public class ResponseResultOpenMediaConversations : ResponseResult
+    {        
         public override ResponseLinks _links { get; set; }
         public int Count { get; set; }
         public override bool IsSuccess => IsSuccessStatusCode && _embedded!=null;
-        public ResponseResultEmbedded<ResponseResultConversation> _embedded { get; set; }
-        #endregion
+        public ResponseResultEmbedded<ResponseResultOpenMediaConversation> _embedded { get; set; }
+        public ICollection<ResponseResultOpenMediaConversation> Items { get { return _embedded?._items; } }
+        public override void SetChildStatus()
+        {
+            if (Items == null) return;
+            foreach (var i in Items)
+            {
+                i.StatusCode = StatusCode;
+                i.ResponseCode = ResponseCode;
+            }
+        }
     }
-    public class ResponseResultConversation : ResponseResult
+    public class ResponseResultOpenMediaConversation : ResponseResult
     {
         public string Id { get; set; }
         public string ConverationState { get; set; }
@@ -30,13 +40,6 @@ namespace Chat.Web.MiccSdk.OpenMedia
         public override ResponseLinks _links { get; set; }
         public override bool IsSuccess => IsSuccessStatusCode && !string.IsNullOrEmpty(Id);
 
-        internal void CopyHttpResult(ResponseResult r)
-        {
-            var result = this;
-            result.StatusCode = r.StatusCode;
-            result.ResponseCode = r.ResponseCode;
-            result.Error = r.Error;
-            result.Message = r.Message;
-        }
+        
     }
 }

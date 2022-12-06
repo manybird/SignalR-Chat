@@ -1,10 +1,12 @@
 ﻿$(document).ready(function () {
 
     //#region connection for hub
-
     const na1ta = $('#inputNa1ta').val();
-    console.log(`na1ta: ${na1ta}`);
+    //console.log(`na1ta: ${na1ta}`);
 
+    const caseId = $('#inputCaseId').val();
+    
+    
     var connection = new signalR.HubConnectionBuilder().withUrl(`/chatHub?na1ta=${na1ta}`).build();
 
     connection.start().then(function () {
@@ -22,7 +24,8 @@
         var isMine = messageView.from === viewModel.myName();
         var message = new ChatMessage2(messageView, isMine);
         viewModel.chatMessages.push(message);
-        $(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 1000);
+        //$(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 1000);
+        ScrollToEnd(".messages-container");
     });
 
     //on new system Message
@@ -32,7 +35,7 @@
         console.log('newSystemMessage', message);
 
         viewModel.chatMessages.push(message);
-        $(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 1000);
+        ScrollToEnd(".messages-container");
     });
 
     //on getProfileInfo    
@@ -50,7 +53,9 @@
     //on onAdminIdUpdated, after Join chat room
     connection.on("onRoomJoinCompleted", function (room) {
         console.log("onRoomJoinCompleted", room);        
-        viewModel.adminId(room.adminId);        
+        viewModel.adminId(room.adminId);    
+        //viewModel.caseId(room.caseId);
+        viewModel.messageHistory();
     });
 
     //addUser , Other user join to this chat room
@@ -112,9 +117,10 @@
     function AppViewModel(na1ta) {
            
         var self = this;
-        self.na1ta = ko.observable("");
-                
+        self.na1ta = ko.observable("");                
         self.adminId = ko.observable("");
+        self.caseId = ko.observable("");
+
         self.message = ko.observable("");
         self.chatRooms = ko.observableArray([]);
         self.chatUsers = ko.observableArray([]);
@@ -129,25 +135,7 @@
         self.showAvatar = ko.computed(function () {
             return self.isLoading() == false && self.myAvatar() != null;
         });
-        
-        self.onRequestCustomerServiceClick = function (o, i) {            
-            fetch('/api/UserAction/RequestCustomerService', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ adminId: self.adminId(), content: '' }),
-            }).then(response => response.json()).then(self.handleErrorIfAny);
-        };
-        
-        self.onShowOrderDetail = function (o, i) {
-            console.log('onShowOrderDetail', this);
-
-            fetch('/api/UserAction/ShowOrderDetail', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ adminId: self.adminId(), content: '' }),
-            }).then(response => response.json()).then(self.handleErrorIfAny);
-        };
-
+                
         self.onEnterPressInMessageBox = function (d, e) {
             if (e.keyCode === 13) {
                 //Skip private message
@@ -188,7 +176,7 @@
                 fetch('/api/Messages/ByAgent/' + self.na1ta(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room: roomName, content: message })
+                    body: JSON.stringify({ room: roomName, content: message, caseId:self.caseId() })
                 });
             }
         }
@@ -200,12 +188,11 @@
         }
 
         self.joinRoom = function (room) {
+            self.joinedRoom(room.name());
+            self.joinedRoomId(room.id());
             connection.invoke("Join", room.name()).then(function () {
-                self.joinedRoom(room.name());
-                self.joinedRoomId(room.id());
-                
                 self.userList();
-                self.messageHistory();
+                //self.messageHistory();
             });
         }
 
@@ -287,7 +274,8 @@
         }
 
         self.messageHistory = function () {
-            fetch('/api/Messages/Room/' + viewModel.joinedRoom()+'') //+'/5'
+            const url = `/api/Messages/RoomB/${self.joinedRoom()}/${self.caseId()}`;
+            fetch(url) //+'/5'
                 .then(response => response.json())
                 .then(data => {
                     self.chatMessages.removeAll();
@@ -297,7 +285,8 @@
                         self.chatMessages.push(new ChatMessage(d.id, d.content, d.timestamp, d.from, isMine, d.avatar));
                     }
 
-                    $(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 1000);
+                    ScrollToEnd(".messages-container");
+                    //$(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 0);
                 });
         }
 
@@ -337,8 +326,8 @@
 
         self.userAdded = function (user) {
             var temp;
-            ko.utils.arrayForEach(self.chatUsers(), function (user) {
-                if (user.connectionId() == id) temp = user;
+            ko.utils.arrayForEach(self.chatUsers(), function (u) {
+                if (u.connectionId() == user.connectionId()) temp = u;
             });
             if (temp) return;
             self.chatUsers.push(user);
@@ -369,6 +358,21 @@
                 }
             });
         }
+    }
+
+    function ScrollToEnd(container, lastScrollTop) {
+        var c = $(container);
+        const cc = c[0];
+                
+        c.animate({ scrollTop: cc.scrollHeight },
+        {
+            duration: 800,
+            complete: function () {
+                if (lastScrollTop == cc.scrollTop) return;
+                ScrollToEnd(container, cc.scrollTop);             
+            }
+        });
+
     }
 
     function ChatRoom(id, name) {
@@ -457,6 +461,7 @@
     ko.applyBindings(viewModel);
 
     viewModel.na1ta(na1ta);
+    viewModel.caseId(caseId);
     viewModel.adminId($('#inputAdminId').val());
 
 });

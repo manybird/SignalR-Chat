@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -9,9 +8,7 @@ using Chat.Web.Hubs;
 using Chat.Web.MiccSdk;
 using Chat.Web.Models;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -38,7 +35,7 @@ namespace Chat.Web.Pages
             _logger = logger;
         }              
 
-        public async Task OnGet(string adminId,int? take)
+        public async Task OnGet(string adminId, string caseId, int? take)
         {
             Take= take;
             this.AppUser = await _userManager.FindByIdAsync(adminId);
@@ -57,13 +54,13 @@ namespace Chat.Web.Pages
                 return;
             }
 
-             var  messages = _context.Messages.Where(m => m.ToRoomId == room.Id)
+             var  messages = _context.Messages.Where(m => m.ToRoomId == room.Id && m.CaseId == caseId)
                 .Include(m => m.FromUser)
                 .Include(m => m.ToRoom)
                 .OrderByDescending(m => m.Timestamp)
                 .Take(take??10)
                 .AsEnumerable()
-                //.Reverse()
+                .Reverse()
                 .ToList();
 
             this.Messages = _mapper.Map<ICollection<Message>, ICollection<MessageExt>>(messages);

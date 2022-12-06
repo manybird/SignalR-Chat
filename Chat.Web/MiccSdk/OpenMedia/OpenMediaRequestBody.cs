@@ -84,14 +84,11 @@ namespace Chat.Web.MiccSdk.OpenMedia
             }
         }
         
-
         public string Id { get; set; }
         public string Name { get; set; }
-        //public string TargetUri { get; set; }
+        
         public bool TargeturiEmbedded { get; set; }
-        //public string PreviewUrl { get; set; }
-        //public string HistoryUrl { get; set; }
-
+        
         public string Tenant { get; set; }
         public string Queue { get; set; }
         public string From { get; set; }
@@ -104,14 +101,14 @@ namespace Chat.Web.MiccSdk.OpenMedia
         
         }
 
-        internal void SetValue(string chatId, string name, string email)
+        internal void SetValue(string chatId, string caseId, string name, string email)
         {
             var body = this;
-            body.Id = chatId;
+            body.Id = caseId;
 
-            _urlTarget = string.Format(_urlTarget,chatId);
-            _urlHistory = string.Format(_urlHistory, chatId);
-            _urlPreview = string.Format(_urlPreview, chatId);
+            _urlTarget = string.Format(_urlTarget, chatId, caseId);
+            _urlHistory = string.Format(_urlHistory, chatId, caseId);
+            _urlPreview = string.Format(_urlPreview, chatId, caseId);
 
             body.From = string.Format("{0} <{1}>", name, email);
             body.VariableData ??= new VariableData();

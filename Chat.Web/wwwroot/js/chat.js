@@ -3,30 +3,46 @@
     //#region connection for hub
 
     var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+    //connection.logging = true;
 
-    connection.start().then(function () {
-        console.log('SignalR connection Started...')
-        viewModel.roomList();
-        viewModel.userList();
-    }).catch(function (err) {
-        return console.error(err);
+    
+    async function startSignalR() {
+        console.log('SignalR starting...')
+        connection.start().then(function () {
+            console.log('SignalR connection Started...')
+            connection.connectionId = connection.connection.connectionId;
+            viewModel.roomList();
+            viewModel.userList();
+        }).catch(function (err) {
+            return console.error(err);
+        });
+    }
+
+    connection.onclose(async () => {
+        console.log('connection.onclose');
+        //await startSignalR();
     });
+
+    startSignalR();
+
     //on new Message
     connection.on("newMessage", function (messageView) {
         var isMine = messageView.from === viewModel.myName();
         var message = new ChatMessage2(messageView, isMine);
         viewModel.chatMessages.push(message);
-        $(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 1000);
+        //$(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 0);
+        ScrollToEnd(".messages-container");
     });
 
     //on new system Message
     connection.on("newSystemMessage", function (messageView) {        
         var message = new ChatMessage2(messageView, false, true);
 
-        console.log('newSystemMessage', message);
+        console.log('newSystemMessage', messageView.conversation);
 
         viewModel.chatMessages.push(message);
-        $(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 1000);
+        //$(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 0);
+        ScrollToEnd(".messages-container");
     });
 
     //on getProfileInfo    
@@ -43,8 +59,11 @@
 
     //on onAdminIdUpdated, after Join chat room
     connection.on("onRoomJoinCompleted", function (room) {
-        console.log("onRoomJoinCompleted", room);        
-        viewModel.adminId(room.adminId);        
+        //console.log("onRoomJoinCompleted", room);        
+        viewModel.adminId(room.adminId);
+        viewModel.caseId(room.caseId);
+        viewModel.messageHistory();
+
     });
 
     //addUser , Other user join to this chat room
@@ -81,7 +100,7 @@
     //onError
     connection.on("onError", function (message) {
         viewModel.serverInfoMessage(message);
-        $("#errorAlert").removeClass("d-none").show().delay(5000).fadeOut(500);
+        $("#errorAlert").removeClass("d-none").show().delay(50000).fadeOut(500);
     });
 
     //onRoomDeleted
@@ -100,6 +119,17 @@
         }
     });
 
+    //onConversationStateUpdate
+    connection.on("onConversationStateUpdate", function (obj) {
+        //if (!viewModel.isMonitoring()) return;
+        //console.log("onConversationStateUpdate", obj.conversation);        
+        viewModel.setConversationState(obj.conversation);
+    });
+
+    //error
+    
+    
+
     //#endregion
 
     
@@ -107,8 +137,9 @@
            
         var self = this;
 
-
         self.adminId = ko.observable("");
+        self.caseId = ko.observable("");
+                
         self.message = ko.observable("");
         self.chatRooms = ko.observableArray([]);
         self.chatUsers = ko.observableArray([]);
@@ -124,15 +155,74 @@
             return self.isLoading() == false && self.myAvatar() != null;
         });
 
-        
-        self.onRequestCustomerServiceClick = function (o, i) {
-            //console.log('onRequestCustomerServiceClick', this);
+        //#region UserActionRegion
 
+        self.folder = ko.observable("");
+        self.conversationState = ko.observable("");
+        self.positionInQueue = ko.observable("-");
+
+        self.isMonitoring = ko.observable(false);
+
+        self.setConversationState = function (conversation) {
+            if (!conversation) {                
+                self.folder('');
+                self.conversationState('');
+                self.positionInQueue('-');                
+            } else {
+                if ( conversation.folder==null) conversation.folder = '';
+                self.folder(conversation.folder);
+                self.conversationState(conversation.conversationState);
+                self.positionInQueue(conversation.positionInQueue);
+            }
+        }
+
+        self.startMonitorQueueState = function (conversation) {                      
+
+            self.setConversationState(conversation);
+            if (!self.isMonitoring()) return;
+
+            return;
+
+            setTimeout(function () {
+                if (!self.isMonitoring()) return;
+                fetch('/api/UserAction/RequestMonitorState', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ adminId: self.adminId(), connectionId: connection.connectionId })
+                }).then(function (response) {
+
+                    if (!response.ok) return null;
+                    
+                    console.log('response',response);
+                    const p = response.json();
+                    p.then(function (obj) {
+                        console.log(obj);
+                        if (!obj) return;
+                        self.startMonitorQueueState(obj.conversation);
+                    });
+                    return p;
+                }).then(self.handleErrorIfAny);
+            }, 3000);
+        }
+        self.stopMonitorQueueState = function () {
+            self.isMonitoring(false);
+        }
+        
+        self.onRequestCustomerServiceClick = function (o, i) {                                    
             fetch('/api/UserAction/RequestCustomerService', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ adminId: self.adminId(), content: '' }),
-            }).then(response => response.json()).then(self.handleErrorIfAny);
+                body: JSON.stringify({ adminId: self.adminId(), content: '', connectionId: connection.connectionId,caseId:self.caseId() })
+            }).then(function (response) {
+                if (!response.ok) return null;
+                const p = response.json();
+                p.then(function (obj) {
+                    console.log(obj);
+                    self.isMonitoring(true);
+                    self.startMonitorQueueState(obj.conversation);
+                });
+                return p;
+            }).then(self.handleErrorIfAny);
         };
         
         self.onShowOrderDetail = function (o, i) {
@@ -144,6 +234,8 @@
                 body: JSON.stringify({ adminId: self.adminId(), content: '' }),
             }).then(response => response.json()).then(self.handleErrorIfAny);
         };
+
+        //#endregion
 
         self.onEnterPressInMessageBox = function (d, e) {
             if (e.keyCode === 13) {
@@ -176,7 +268,6 @@
             else {
                 self.sendToRoom(self.joinedRoom(), self.message());
             }
-
             self.message("");
         }
 
@@ -185,7 +276,7 @@
                 fetch('/api/Messages', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ room: roomName, content: message })
+                    body: JSON.stringify({ room: roomName, content: message, caseId:self.caseId() })
                 });
             }
         }
@@ -197,12 +288,10 @@
         }
 
         self.joinRoom = function (room) {
-            connection.invoke("Join", room.name()).then(function () {
-                self.joinedRoom(room.name());
-                self.joinedRoomId(room.id());
-                
+            self.joinedRoom(room.name());
+            self.joinedRoomId(room.id());   
+            connection.invoke("Join", room.name()).then(function () {                             
                 self.userList();
-                self.messageHistory();
             });
         }
 
@@ -282,7 +371,9 @@
         }
 
         self.messageHistory = function () {
-            fetch('/api/Messages/Room/' + viewModel.joinedRoom()+'') //+'/5'
+            const url = `/api/Messages/Room/${self.joinedRoom()}/${self.caseId()}`;
+            
+            fetch(url) //+'/5'
                 .then(response => response.json())
                 .then(data => {
                     self.chatMessages.removeAll();
@@ -292,7 +383,7 @@
                         self.chatMessages.push(new ChatMessage(d.id, d.content, d.timestamp, d.from, isMine, d.avatar));
                     }
 
-                    $(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 1000);
+                    ScrollToEnd(".messages-container");
                 });
         }
 
@@ -331,26 +422,22 @@
         }
 
         self.userAdded = function (user) {
-            console.log('self.userAdded', user);
-            console.log('self.userAdded each', self.chatUsers());
+            
             var temp;
-            ko.utils.arrayForEach(self.chatUsers(), function (u) {
-                console.log('self.userAdded each', u);
-                if (u.connectionId() == id) temp = user;
-            });
+            ko.utils.arrayForEach(self.chatUsers(), function (u) {            
+                if (u.connectionId() == user.connectionId()) temp = u;
+            });            
             if (temp) return;
             self.chatUsers.push(user);
         }
 
         self.userRemoved = function (id) {
-            console.log('self.userRemoved id', id);
+            
             var temp;
-            ko.utils.arrayForEach(self.chatUsers(), function (user) {
-                console.log('self.userRemoved each', user);
+            ko.utils.arrayForEach(self.chatUsers(), function (user) {            
                 if (user.connectionId() == id)
                     temp = user;
-            });
-            console.log('self.userRemoved to delete', temp);
+            });           
                     
             if (temp) self.chatUsers.remove(temp);
         }
@@ -371,6 +458,21 @@
                 }
             });
         }
+    }
+    function ScrollToEnd(container, lastScrollTop) {
+        var c = $(container);
+        const cc = c[0];
+
+        c.animate(
+            { scrollTop: cc.scrollHeight },
+            {
+                duration: 800,
+                complete: function () {
+                    console.log('ScrollToEnd completed');
+                    if (lastScrollTop == cc.scrollTop) return;
+                    ScrollToEnd(container, cc.scrollTop);
+                }
+            });
     }
 
     function ChatRoom(id, name) {

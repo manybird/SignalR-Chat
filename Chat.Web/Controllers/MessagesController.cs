@@ -14,6 +14,7 @@ using Chat.Web.ViewModels;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Identity;
 using Chat.Web.MiccSdk;
+using Chat.Web.Helpers;
 
 namespace Chat.Web.Controllers
 {
@@ -42,24 +43,43 @@ namespace Chat.Web.Controllers
             return Ok(messageViewModel);
         }
 
-        [AllowAnonymous]
-        [HttpGet("Room/{roomName}")]
-        public IActionResult GetMessages(string roomName)
+        
+        [HttpGet("Room/{roomName}/{caseId}")]
+        public IActionResult GetMessagesA(string roomName,string caseId)
         {
-            return GetMessages(roomName, 100);
+            return GetMessagesInner(roomName, caseId);
+        }
+        
+        [HttpGet("Room/{roomName}/{caseId}/{take}")]
+        public IActionResult GetMessagesA(string roomName, string caseId, int take)
+        {
+            return GetMessagesInner(roomName, caseId, take);
         }
 
         [AllowAnonymous]
-        [HttpGet("Room/{roomName}/{take}")]
-        public IActionResult GetMessages(string roomName,int take=100)
+        [HttpGet("RoomB/{roomName}/{caseId}")]
+        public IActionResult GetMessagesB(string roomName, string caseId)
+        {
+            return GetMessagesInner(roomName, caseId);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("RoomB/{roomName}/{caseId}/{take}")]
+        public IActionResult GetMessagesB(string roomName, string caseId, int take)
+        {
+            return GetMessagesInner(roomName, caseId, take);
+        }
+                
+        private IActionResult GetMessagesInner(string roomName,string caseId,int take=1000)
         {
             var room = _context.Rooms.FirstOrDefault(r => r.Name == roomName);
             if (room == null)
                 return BadRequest();
 
-            var messages = _context.Messages.Where(m => m.ToRoomId == room.Id)
+            var messages = _context.Messages.Where(m => m.ToRoomId == room.Id && m.CaseId == caseId)
                 .Include(m => m.FromUser)
                 .Include(m => m.ToRoom)
+                //.Include(m=>m.Case)
                 .OrderByDescending(m => m.Timestamp)
                 .Take(take)
                 .AsEnumerable()
@@ -75,12 +95,22 @@ namespace Chat.Web.Controllers
         public async Task<ActionResult<Message>> Create(MessageViewModel messageViewModel)
         {
             var user = await base.GetUserByName(User.Identity.Name);
-            return await CreateMessageResult(messageViewModel,user);
+            return await CreateMessageInner(messageViewModel,user);
         }
 
-        private async Task<ActionResult<Message>> CreateMessageResult(MessageViewModel messageViewModel, ApplicationUser user)
+        
+
+        [AllowAnonymous]
+        [HttpPost("ByAgent/{na1ta}")]
+        public async Task<ActionResult<Message>> CreateByAgent(MessageViewModel messageViewModel,string na1ta)
         {
-            
+            var user = await base.GetUserByName(na1ta);
+            return await CreateMessageInner(messageViewModel,user);
+        }
+
+        private async Task<ActionResult<Message>> CreateMessageInner(MessageViewModel messageViewModel, ApplicationUser user)
+        {
+
             var room = _context.Rooms.FirstOrDefault(r => r.Name == messageViewModel.Room);
             if (room == null)
                 return BadRequest();
@@ -90,7 +120,8 @@ namespace Chat.Web.Controllers
                 Content = Regex.Replace(messageViewModel.Content, @"<.*?>", string.Empty),
                 FromUser = user,
                 ToRoom = room,
-                Timestamp = DateTime.Now
+                Timestamp = DateTime.Now,
+                CaseId = messageViewModel.CaseId,
             };
 
             _context.Messages.Add(msg);
@@ -101,15 +132,6 @@ namespace Chat.Web.Controllers
             await _hubContext.Clients.Group(room.Name).SendAsync("newMessage", createdMessage);
 
             return CreatedAtAction(nameof(Get), new { id = msg.Id }, createdMessage);
-        }
-
-
-        [AllowAnonymous]
-        [HttpPost("ByAgent/{na1ta}")]
-        public async Task<ActionResult<Message>> CreateByAgent(MessageViewModel messageViewModel,string na1ta)
-        {
-            var user = await base.GetUserByName(na1ta);
-            return await CreateMessageResult(messageViewModel,user);
         }
 
         [HttpDelete("{id}")]

@@ -1,8 +1,10 @@
 ﻿using AutoMapper;
 using Chat.Web.Data;
+using Chat.Web.Helpers;
 using Chat.Web.Models;
 using Chat.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -22,8 +24,23 @@ namespace Chat.Web.Hubs
         //public readonly static List<UserViewModel> _Connections = new List<UserViewModel>();
         //private readonly static Dictionary<string, string> _ConnectionsMap = new Dictionary<string, string>();
 
-        
-        private readonly static Dictionary<string, UserViewModelExt> _ConnectionsMap = new Dictionary<string, UserViewModelExt>();
+        public delegate void OnConnectionChangedEventHandler(ChatHub sender, UserViewModelExt userViewModelExt,bool isAdd);
+        public static event OnConnectionChangedEventHandler OnConnectionChanged;
+
+        private static void ConnectionChanged(ChatHub sender, UserViewModelExt userViewModelExt, bool isAdd)
+        {
+            if (OnConnectionChanged == null) return;
+            OnConnectionChanged(sender, userViewModelExt,isAdd);
+        }
+
+        private readonly static Dictionary<string, UserViewModelExt> _connectionsMap = new Dictionary<string, UserViewModelExt>();
+        public static Dictionary<string, UserViewModelExt> GetConnectionsMap()
+        {
+            lock(_connectionsMap)
+            {
+                return _connectionsMap;
+            }
+        }
 
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
@@ -44,7 +61,7 @@ namespace Chat.Web.Hubs
         {
             if (string.IsNullOrEmpty(message.Trim())) return;
 
-            foreach(var kvp in _ConnectionsMap)
+            foreach(var kvp in _connectionsMap)
             {
                 var sender = kvp.Value;
                 if (sender == null) continue;
@@ -74,6 +91,11 @@ namespace Chat.Web.Hubs
 
         private string ConnectionId { get { return Context.ConnectionId; } }
 
+        private async Task SendErrorToCaller(string msg)
+        {
+            await Clients.Caller.SendAsync("onError", msg);
+        }
+
         /// <summary>
         /// Join room
         /// </summary>
@@ -83,11 +105,13 @@ namespace Chat.Web.Hubs
         {
             try
             {   
-                var b = _ConnectionsMap.ContainsKey(ConnectionId);
+                var b = _connectionsMap.ContainsKey(ConnectionId);
                 if (!b) return;
 
-                var userView = _ConnectionsMap[ConnectionId];
-                if (userView != null && userView.CurrentRoom != roomName)
+                var userView = _connectionsMap[ConnectionId];
+                if (userView == null) return;
+
+                if (userView.CurrentRoom != roomName)
                 {
                     // Remove user from others list
                     if (!string.IsNullOrEmpty(userView.CurrentRoom))
@@ -95,7 +119,7 @@ namespace Chat.Web.Hubs
 
                     // Join to new chat room
                     await Leave(userView.CurrentRoom);
-                    await Groups.AddToGroupAsync(Context.ConnectionId, roomName);
+                    await Groups.AddToGroupAsync(ConnectionId, roomName);
                     userView.CurrentRoom = roomName;
 
                     // Tell others to update their list of users
@@ -103,17 +127,65 @@ namespace Chat.Web.Hubs
 
                     var room = _context.Rooms.FirstOrDefault(r => r.Name == roomName);
 
-                    if (room!=null)
+                    if (room == null)
                     {
-                        var roomViewModel = _mapper.Map<Room, RoomViewModel>(room);
-                        await Clients.Caller.SendAsync("onRoomJoinCompleted", roomViewModel);
-                    }                   
+                        await SendErrorToCaller("Get room fail: " + roomName);
+                        return;
+                    }
+
+                    var c1 = _context.Cases.FirstOrDefault(r => r.AdminId == room.AdminId && r.CaseCompletionDate == null);
+
+                    var isUser = IsUser;
+
+                    // Only user can create case
+                    if (c1 == null && isUser)
+                    {
+
+                        c1 = new Case(Guid.NewGuid().ToString())
+                        {
+                            AdminId = userView.AdminId,
+                            RoomId = room.Id,
+                        };
+                        
+                        _context.Cases.Add(c1);
+                        await _context.SaveChangesAsync();
+                    }                    
+                    
+                    //if (!isUser && c1 == null)
+                    //{
+                        //await SendErrorToCaller("Join room fail , No caseId found for: " + roomName);
+                        //return;
+                    //}
+
+                    var roomViewModel = _mapper.Map<Room, RoomViewModel>(room);
+
+                    if (c1 != null) roomViewModel.CaseId = c1.Id;
+                    if (IsUser) UpdateCaseID(roomViewModel);
+                    
+                    await Clients.Caller.SendAsync("onRoomJoinCompleted", roomViewModel);
+
                 }
             }
             catch (Exception ex)
-            {
-                await Clients.Caller.SendAsync("onError", "You failed to join the chat room!" + ex.Message);
+            {                
+                await SendErrorToCaller("Failed to join room! " + ex.Message);
             }
+        }
+
+        private void UpdateCaseID(RoomViewModel roomViewModel)
+        {
+            UserViewModelExt userViewModel = null;
+            lock (_connectionsMap)
+            {
+                if (_connectionsMap.ContainsKey(ConnectionId))
+                {
+                    userViewModel = _connectionsMap[ConnectionId];
+                    userViewModel.CaseId = roomViewModel.CaseId;
+                }
+            }
+
+            if (userViewModel == null) return;
+            ConnectionChanged(this, userViewModel, true);
         }
 
         public async Task Leave(string roomName)
@@ -125,27 +197,40 @@ namespace Chat.Web.Hubs
         {
             
 
-            return _ConnectionsMap.Values.Where(u => u.CurrentRoom == roomName).ToList();
+            return _connectionsMap.Values.Where(u => u.CurrentRoom == roomName).ToList();
+        }
+
+        private string Na1ta { 
+            get
+            {
+                return Context.GetHttpContext().Request.Query["na1ta"];
+            } 
+        }
+        private bool IsUser
+        {
+            get
+            {
+                return string.IsNullOrEmpty(Na1ta);
+            }
         }
 
         public async override Task OnConnectedAsync()
-        {
-            string na1ta = Context.GetHttpContext().Request.Query["na1ta"];
+        {            
 
             //if (string.IsNullOrEmpty(na1ta))
             //{
             //    return base.OnConnectedAsync();
             //}
 
-            string IdentityName = this.GetIdentityName(na1ta);
+            string IdentityName = this.GetIdentityName(Na1ta);
             try
             {
                 var user = _context.Users.Where(u => u.UserName == IdentityName).FirstOrDefault();
-                               
-
+                
                 if (user == null)
                 {
-                    //User not in DB
+                    //User not in DB, should not equal to null
+                    //return;
                     user = ApplicationUser.FromUserName(IdentityName);
                 }else if (await _userManager.IsInRoleAsync(user, ApplicationRole.UserKey))
                 {
@@ -164,10 +249,12 @@ namespace Chat.Web.Hubs
 
                 //_Connections.Add(userViewModel);
 
-                if (!_ConnectionsMap.ContainsKey(cId))
-                    _ConnectionsMap.Add(cId, userViewModel);
+                if (!_connectionsMap.ContainsKey(cId))
+                    _connectionsMap.Add(cId, userViewModel);
                 else
-                    _ConnectionsMap[cId] = userViewModel;
+                    _connectionsMap[cId] = userViewModel;
+
+                ConnectionChanged(this, userViewModel,true);
 
                 //Clients.Caller.SendAsync("getProfileInfo", user.FullName, user.Avatar);
                 await Clients.Caller.SendAsync("getProfileInfo", userViewModel);
@@ -188,13 +275,14 @@ namespace Chat.Web.Hubs
                 //var ConnectionId = Context.ConnectionId;
                 
                 // Remove mapping
-                if (_ConnectionsMap.ContainsKey(ConnectionId))
+                if (_connectionsMap.ContainsKey(ConnectionId))
                 {
-                    var user = _ConnectionsMap[ConnectionId];
+                    var user = _connectionsMap[ConnectionId];
                     if (user != null)
                        await Clients.OthersInGroup(user.CurrentRoom).SendAsync("removeUser", user);
 
-                    _ConnectionsMap.Remove(ConnectionId);
+                    _connectionsMap.Remove(ConnectionId);
+                    ConnectionChanged(this, user, false);
                 }
                 
             }
@@ -211,7 +299,7 @@ namespace Chat.Web.Hubs
         private string GetIdentityNameByConnectionId(string ConnectionId)
         {
             string na1ta = "";
-            foreach (var kvp in _ConnectionsMap)
+            foreach (var kvp in _connectionsMap)
             {
                 if (!string.Equals(ConnectionId, kvp.Key, StringComparison.InvariantCultureIgnoreCase)) continue;
                 na1ta = kvp.Value.Username;

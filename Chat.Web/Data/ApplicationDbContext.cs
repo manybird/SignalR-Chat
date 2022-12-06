@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Text;
-
+using System.Threading.Tasks;
 using Chat.Web.Models;
 using Microsoft.AspNetCore.Identity;
 //using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace Chat.Web.Data
 {
@@ -20,20 +20,27 @@ namespace Chat.Web.Data
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
-        {
+        {            
         }
+
+        public DbSet<Case> Cases { get; set; }
 
         public DbSet<Room> Rooms { get; set; }
         public DbSet<Message> Messages { get; set; }
         public DbSet<ApplicationUser> AppUsers { get; set; }
         public DbSet<ApplicationRole> AppRoles { get; set; }
         public DbSet<ApplicationUserRole> AppUserRoles { get; set; }
-
         //public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<Case>(b =>
+            {
+                b.Property(s => s.CaseDate).HasDefaultValueSql("getdate()");
+            });
+
             modelBuilder.Entity<ApplicationUser>(b =>
             {
                 // Each User can have many entries in the UserRole join table
@@ -55,6 +62,20 @@ namespace Chat.Web.Data
             //InitDefaultData(modelBuilder);
             //builder.HasDefaultSchema("admin");            
             //builder.Entity("Chat.Web.Models.Room", b =>  b.ToTable("Rooms"));
+        }
+
+        public async Task< Case> GetCaseByIdASync(string caseId)
+        {
+            return await Cases.FirstOrDefaultAsync(r => r.Id == caseId);
+        }
+        public async Task<Case> GetCaseByAdminAndCaseIdAsync(string adminId, string caseId)
+        {
+            return await Cases.FirstOrDefaultAsync(r => r.Id == caseId && r.AdminId == adminId);
+        }
+
+        public async Task<Case> GetNotCompletedCaseByAdminIdAsync(string adminId)
+        {
+            return await Cases.FirstOrDefaultAsync(r => r.AdminId == adminId && r.CaseCompletionDate == null);
         }
 
         /// <summary>

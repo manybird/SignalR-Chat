@@ -12,6 +12,8 @@ namespace Chat.Web.MiccSdk
 {
     public class Micc
     {
+        public string[] CompletedCaseFolders { get; set; } = {""};
+
         public DateTime? lastCheckSignIn { get; set; }
         public bool shouldCheckSignIn()
         {
@@ -80,6 +82,7 @@ namespace Chat.Web.MiccSdk
             return String.Format("Bearer {0}", AuthorizationToken);
         }
 
+        #region Url
         private string _urlOpenMedia;
         public string UrlOpenMedia
         {
@@ -90,12 +93,19 @@ namespace Chat.Web.MiccSdk
             }
             set => _urlOpenMedia = value;
         }
+        public string UrlOpenMediaById(string id) => string.Format("{0}/{1}", UrlOpenMedia, id);
 
-        public string UrlOpenMediaById(string id) { 
-            return string.Format("{0}/{1}", UrlOpenMedia,id);
-            
+        private string _urlConversation;
+        public string UrlConversation
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(UrlBase)) return _urlConversation;
+                return UrlBase + _urlConversation;
+            }
+            set => _urlConversation = value;
         }
-
+        public string UrlConversationById(string id) => string.Format(UrlConversation, id);
 
         private string _urlOpenMediaQueues;
         public string UrlOpenMediaQueues
@@ -107,7 +117,10 @@ namespace Chat.Web.MiccSdk
             }
             set => _urlOpenMediaQueues = value;
         }
-        
+
+        #endregion
+
+
 
 
         #region "OpenMediaForChat"
@@ -117,12 +130,12 @@ namespace Chat.Web.MiccSdk
 
         //public string OpenMediaRequestBodyJson { get; set; }
 
-        public OpenMediaRequestBody NewOpenMediaRequest(string chatId,string name,string email)
+        public OpenMediaRequestBody NewOpenMediaRequest(string chatId, string caseId, string name,string email)
         {
             var json = JsonConvert.SerializeObject(OpenMediaRequestBodyDefault);
 
             var body = JsonConvert.DeserializeObject<OpenMediaRequestBody>(json);
-            body.SetValue(chatId,name,email);           
+            body.SetValue(chatId,caseId,name,email);           
 
             return body;
         }

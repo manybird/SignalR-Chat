@@ -53,12 +53,12 @@ namespace Chat.Web.Areas.Identity.Pages.Account
         public class InputModel
         {
             [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 5)]
+            [StringLength(100, ErrorMessage = "At least {2} and max {1} characters long.", MinimumLength = 8)]
             [Display(Name = "Full Name")]
             public string FullName { get; set; }
 
             [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 5)]
+            [StringLength(12, ErrorMessage = "At least {2} and max {1} characters long.", MinimumLength = 8)]
             [Display(Name = "Username")]
             public string UserName { get; set; }
 
@@ -68,7 +68,7 @@ namespace Chat.Web.Areas.Identity.Pages.Account
             public string Email { get; set; }
 
             [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+            [StringLength(100, ErrorMessage = "At least {2} and max {1} characters long.", MinimumLength = 6)]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
             public string Password { get; set; }
@@ -89,7 +89,7 @@ namespace Chat.Web.Areas.Identity.Pages.Account
         {
             // If we got this far, something failed, redisplay form
             if (!ModelState.IsValid) return Page();
-
+                        
             returnUrl = returnUrl ?? Url.Content("~/");
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 

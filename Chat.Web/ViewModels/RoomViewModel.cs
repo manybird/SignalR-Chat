@@ -19,6 +19,8 @@ namespace Chat.Web.ViewModels
 
         public int OperationMode { get; set; }
 
+        public string CaseId { get; set; }
+
         
     }
 }

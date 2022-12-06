@@ -133,15 +133,28 @@
             <h5 id="joinedRoom" data-bind="text:`[`+ joinedRoom() + `]'s room`"></h5>
             <h5> (<span data-bind="text: filteredChatUsers().length">0</span>)</h5>
         </div>
-        <div class="sidebar rounded-3 divUserAction" data-bind="visible: isUser() === 1">
-            
+        <div class="sidebar rounded-3 divUserAction" data-bind="visible: isUser() === 1">            
             <div class=" userAction">
                 <span data-bind="click: onRequestCustomerServiceClick">1. Contact customer serivce</span>
             </div>
             <div class=" userAction" data-bind="click:onShowOrderDetail">
                 <span> 2. Show My orders </span>
             </div>
+
         </div>
+
+        <div class="rounded-3 divUserRequestState" data-bind="visible: isUser() === 1">
+                        
+            <div class="divUserRequestStateRow">
+                <span>Position In Queue:</span><span data-bind="text:positionInQueue()"></span>
+            </div>
+            <div class="divUserRequestStateRow">
+                <span>State:</span><span data-bind="text:folder() +''"></span>
+                
+            </div>
+            <span class="d-none" data-bind="text:conversationState()"></span>
+        </div>
+
         <ul class="list-unstyled flex-grow-1" id="users-list" data-bind="foreach: filteredChatUsers">
             <li data-bind="attr: { 'data-username': userName}">
                 <div class="user">

@@ -66,4 +66,7 @@
     $(document).on("hidden.bs.dropdown", ".actions .dropdown", function () {
         $(this).closest(".actions").addClass("d-none");
     });
+
+    
 });
+

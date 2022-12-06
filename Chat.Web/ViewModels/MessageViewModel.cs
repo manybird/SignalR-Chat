@@ -30,5 +30,6 @@ namespace Chat.Web.ViewModels
         public int TempSystemMessage;
         public int RoomId { get; set; }
         public string AdminId { get; set; }
+        public string CaseId { get; set; }
     }
 }

@@ -17,6 +17,9 @@ namespace Chat.Web.Models
         public int MessageType { get; set; }    
         public string FileFullPath { get; set; }
         public string RelativePath { get; set; }
+
+        public string CaseId { get; set; }
+        public Case Case { get; set; }
     }
 
     public class MessageExt:Message

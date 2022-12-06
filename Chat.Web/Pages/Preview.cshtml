@@ -1,4 +1,4 @@
-﻿@page "{adminId?}/{take:int?}"
+﻿@page "{adminId?}/{caseId?}/{take:int?}"
 @model PreviewModel
 @{
     ViewData["Title"] = "Preview";
@@ -36,6 +36,12 @@
     }
     <div class="main-content">
         <div class="messages-container position-relative">
+            @if (Model.Messages.Count < 1)
+            {
+                <div>
+                    No message found!!!
+                </div>
+            } else{
             <ul class="list-unstyled" id="messages-list">
                 @foreach (var m in Model.Messages)
                 {
@@ -54,6 +60,7 @@
                     </li>                
                 }
             </ul>
+            }
         </div>
     </div>
 </div>

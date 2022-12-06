@@ -20,6 +20,9 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
 using Chat.Web.MiccSdk;
 using Microsoft.Extensions.Options;
+using Chat.Web.Services;
+using Chat.Web.Services.QueuedBackgroundTask;
+using Chat.Web.Services.Scoped;
 
 namespace Chat.Web
 {
@@ -37,7 +40,8 @@ namespace Chat.Web
         {
 
             services.AddSingleton(Configuration.GetSection(typeof(Micc).Name).Get<Micc>());
-            services.AddSingleton(Configuration.GetSection(typeof(AppSettings).Name).Get<AppSettings>());
+            var appSettings = Configuration.GetSection(typeof(AppSettings).Name).Get<AppSettings>();
+            services.AddSingleton(appSettings);
 
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
@@ -58,8 +62,7 @@ namespace Chat.Web
                 oPassword.RequireLowercase = false;
                 oPassword.RequireUppercase = false;
 
-                var user = options.User;
-
+                var user = options.User;                
                 user.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_";
                 user.RequireUniqueEmail = true;
             }).AddRoles<ApplicationRole>().AddEntityFrameworkStores<ApplicationDbContext>();
@@ -67,12 +70,12 @@ namespace Chat.Web
             services.AddAutoMapper(typeof(Startup));
             services.AddTransient<IFileValidator, FileValidator>();
 
-            //services.AddTransient<AppDbContextSeedData>();
-            
+            //services.AddTransient<AppDbContextSeedData>();            
 
             services.AddRazorPages();
             services.AddControllers();
             services.AddSignalR();
+
             services.AddAntiforgery(options =>
             {
                 //options.Cookie.Expiration = TimeSpan.Zero;
@@ -80,14 +83,25 @@ namespace Chat.Web
             });
 
             services.ConfigureApplicationCookie(options =>
-            {
-                
+            {                
             });
+
+            //services.AddHostedService<TimedHostedService>();
+
+            //services.AddSingleton<ScopedProcessingService>();
+            services.AddHostedService<ConsumeScopedServiceHostedService>();
+            services.AddScoped<IScopedProcessingService, ScopedProcessingService>();
+
+            //services.AddSingleton<MonitorWorker>();
+            //services.AddHostedService<QueuedHostedService>();
+            //services.AddSingleton<IBackgroundTaskQueue>(ctx => new BackgroundTaskQueue(appSettings.QueueCapacity));
+            
+            //services.AddScoped<IScopedMonitorService, ScopedMonitorService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env
-            ,ILoggerFactory logger, AppSettings settings)
+            ,ILoggerFactory logger, AppSettings settings,ApplicationDbContext applicationDbContext)
         {
             //AppDbContextSeedData.SeedData(app.ApplicationServices).Wait();
             
@@ -104,7 +118,7 @@ namespace Chat.Web
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.UseStaticFiles();
 
             app.UseRouting();
@@ -114,7 +128,7 @@ namespace Chat.Web
 
             app.UseCors( x =>
             {
-                x.WithOrigins(settings.AllowedOriginsArray());
+                x.WithOrigins(settings.AllowedOrigins);
             });
             
             //app.UsePathBase("/chat");
@@ -127,6 +141,8 @@ namespace Chat.Web
             });
 
             AppDbContextSeedData.SeedData(app.ApplicationServices).Wait();
+
+            //MonitorWorker.Run(app.ApplicationServices);
 
         }
     }

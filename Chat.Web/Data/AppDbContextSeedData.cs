@@ -27,6 +27,9 @@ namespace Chat.Web.Data
                 UserManager<ApplicationUser> _userManager = scope.ServiceProvider.GetService<UserManager<ApplicationUser>>();
                 ApplicationDbContext _context = scope.ServiceProvider.GetService<ApplicationDbContext>();
 
+                //Auto Create db?
+                await _context.Database.MigrateAsync();
+
                 RoleManager<ApplicationRole> _roleManager = scope.ServiceProvider.GetService<RoleManager<ApplicationRole>>();
 
                 string[] urAll = ApplicationRole.RoleAll;

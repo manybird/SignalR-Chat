@@ -1,5 +1,21 @@
 ﻿$bg-color: #157cce;
 $text-color: rgba(white, 0.85);
+$user-request-container-bg-color: #bdf7f1; //#8abde6;
+
+.divUserRequestState {
+    background: $user-request-container-bg-color;
+    margin: 3px;
+    padding: 5px 8px;
+    font-size: 14px;
+
+    .divUserRequestStateRow {
+        display: flex;
+        justify-content: space-between;
+        min-height: 16px;
+        margin: 2px;
+        padding: 2px 
+    }
+}
 
 .sidebar {
     display: flex;

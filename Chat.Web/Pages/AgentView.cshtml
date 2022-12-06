@@ -1,4 +1,4 @@
-﻿@page "{adminId?}"
+﻿@page "{adminId?}/{caseId?}"
 @model AgentViewModel
 
 <div class="alert alert-warning alert-dismissible d-none" id="errorAlert" role="alert">
@@ -15,6 +15,7 @@
 <div class="app d-none" data-bind="css: isLoading() ? 'd-none' : ''">
     <input id="inputNa1ta" type="hidden" value="@Model.Na1ta" />
     <input id="inputAdminId" type="hidden" value="@Model.AdminId" />
+    <input id="inputCaseId" type="hidden" value="@Model.CaseId" />
     <!--Left-->
     <div class="sidebar d-none"> 
         <div class="header">
@@ -130,7 +131,7 @@
         </div>
     </div>
     <!--Right-->
-    <div class="users-container">
+    <div class="agents-container"  >
         <div class="header d-none justify-content-between" >
             <h5 id="joinedRoom" data-bind="text:`[`+ joinedRoom() + `]'s room`"></h5>
             <h5> (<span data-bind="text: filteredChatUsers().length">0</span>)</h5>
@@ -138,20 +139,20 @@
         <div class="sidebar rounded-3 divUserAction" data-bind="visible: isUser() === 1">
             
             <div class=" userAction">
-                <span data-bind="click: onRequestCustomerServiceClick">1. Contact customer serivce</span>
+                <span data-bind1="click: onRequestCustomerServiceClick">1. Contact customer serivce</span>
             </div>
-            <div class=" userAction" data-bind="click:onShowOrderDetail">
+            <div class=" userAction" data-bind1="click:onShowOrderDetail">
                 <span> 2. Show My orders </span>
             </div>
         </div>
         <ul class="list-unstyled flex-grow-1" id="users-list" data-bind="foreach: filteredChatUsers">
             <li data-bind="attr: { 'data-username': userName}">
                 <div class="user">
-                    <span class="avatar me-2 text-uppercase" data-bind="visible: avatar() == null, text: displayName()[0]"></span>
-                    <img class="avatar me-2" data-bind="visible: avatar() != null, attr: { src: avatar() != null ? '/avatars/' + avatar() : '' }" />
+                    @*<span class="avatar me-2 text-uppercase" data-bind="visible: avatar() == null, text: displayName()[0]"></span>
+                    <img class="avatar me-2" data-bind="visible: avatar() != null, attr: { src: avatar() != null ? '/avatars/' + avatar() : '' }" />*@
                     <div class="user-info">
                         <span class="name" data-bind="text: displayName"></span>
-                        <span class="device" data-bind="text: device"></span>
+                        @*<span class="device" data-bind="text: device"></span>*@
                     </div>
                 </div>
             </li>

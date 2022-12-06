@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System;
 using System.Collections;
@@ -10,6 +11,8 @@ namespace Chat.Web.MiccSdk
     {
         public abstract ResponseLinks _links { get; set; }
 
+        
+        public ResponseLinks Next { get; set; }
         public abstract bool IsSuccess { get; }
         
         public string GetErrorOrMessage()
@@ -36,7 +39,7 @@ namespace Chat.Web.MiccSdk
 
         public bool IsSuccessStatusCode
         {
-            get { return (StatusCode >= 200) && (StatusCode <= 299); }
+            get { return ((StatusCode >= 200) && (StatusCode <= 299)); }
         }
 
         public override string ToString()
@@ -44,12 +47,35 @@ namespace Chat.Web.MiccSdk
             return String.Format("MICC: {0} {1} {2} {3}", StatusCode, ResponseCode, Message, Error);
         }
 
+        public void CopyHttpResult(ResponseResult r)
+        {
+            var result = this;
+            result.StatusCode = r.StatusCode;
+            result.ResponseCode = r.ResponseCode;
+            result.Error = r.Error;
+            result.Message = r.Message;
+        }
 
+        public static string SUCCESS_MESSAGE = "Request Success";
+        public virtual void SetChildStatus() { }
+        public virtual string GetContentMessage()
+        {            
+            var result = this;
+            if (result.IsSuccess)
+                return SUCCESS_MESSAGE;
+            else
+                return result.Error;
+        }
     }
 
     public class ResponseResultEmbedded<T>
     {
         public ICollection<T> _items { get; set; }
+    }
+
+    public class ResponseResultEmbeddedItems<T>
+    {
+        public ICollection<T> Items { get; set; }
     }
 
     public class ResponseLinks

@@ -19,6 +19,7 @@ namespace Chat.Web.Mappings
 
             CreateMap<ApplicationUser, UserViewModelExt>()
                 .ForMember(dst => dst.Username, opt => opt.MapFrom(x => x.UserName))
+                .ForMember(dst => dst.AdminId, s => s.MapFrom(x => x.Id))
                 .ForMember(d => d.IsUserVisiting, o => o.MapFrom(x => x.IsUserVisiting));
             CreateMap<UserViewModelExt, ApplicationUser>();
         }

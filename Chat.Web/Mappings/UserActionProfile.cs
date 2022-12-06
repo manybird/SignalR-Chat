@@ -13,6 +13,7 @@ namespace Chat.Web.Mappings
             CreateMap<MessageUserAction, MessageUserActionViewModel>()
                 .ForMember(dst => dst.From, opt => opt.MapFrom(x => x.FromUser.FullName))
                 .ForMember(dst => dst.Room, opt => opt.MapFrom(x => x.ToRoom.Name))
+                .ForMember(dst => dst.CaseId, opt => opt.MapFrom(x => x.Case.Id))
                 .ForMember(dst => dst.Avatar, opt => opt.MapFrom(x => x.FromUser.Avatar))
                 .ForMember(dst => dst.Content, opt => opt.MapFrom(x => BasicEmojis.ParseEmojis(x.Content)));
 

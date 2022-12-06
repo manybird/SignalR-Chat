@@ -1,4 +1,18 @@
-﻿.sidebar {
+﻿.divUserRequestState {
+  background: #bdf7f1;
+  margin: 3px;
+  padding: 5px 8px;
+  font-size: 14px;
+}
+.divUserRequestState .divUserRequestStateRow {
+  display: flex;
+  justify-content: space-between;
+  min-height: 16px;
+  margin: 2px;
+  padding: 2px;
+}
+
+.sidebar {
   display: flex;
   flex-direction: column;
   background: #157cce;
@@ -168,8 +182,11 @@
   object-fit: contain;
 }
 .message-item .message-content .content .post-image {
-  width: 100%;
+  /*width: 100%;*/
   border-radius: 2px;
+}
+.message-item .message-content .content a div {
+  overflow-wrap: break-word;
 }
 .message-item .message-content:after {
   content: "";
@@ -309,6 +326,7 @@
   flex-direction: column;
   flex-grow: 1;
   overflow: hidden;
+  background-color: #f9efef;
 }
 #users-list .user .user-info span {
   display: block;
@@ -525,4 +543,7 @@ body {
 .app .users-container {
   width: 250px;
   min-width: 250px;
+}
+.app .agents-container {
+  max-width: 150px;
 }

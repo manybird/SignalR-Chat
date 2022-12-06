@@ -16,10 +16,17 @@ namespace Chat.Web.Data.Configurations
 
             builder.Property(s => s.Content).IsRequired().HasMaxLength(2000);
 
+            builder.Property(s => s.CaseId).HasMaxLength(100);
+
             builder.HasOne(s => s.ToRoom)
                 .WithMany(m => m.Messages)
                 .HasForeignKey(s => s.ToRoomId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(s => s.Case)
+                .WithMany(m => m.Messages)
+                .HasForeignKey(s => s.CaseId)
+                ;//.OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

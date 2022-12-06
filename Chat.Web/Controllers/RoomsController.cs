@@ -27,7 +27,7 @@ namespace Chat.Web.Controllers
         //private readonly ApplicationDbContext _context;
         //private readonly IMapper _mapper;
         //private readonly IHubContext<ChatHub> _hubContext;
-        private readonly ITempDataDictionary _tempData;
+        
         public RoomsController(ApplicationDbContext context,
             IMapper mapper,
             IHubContext<ChatHub> hubContext,
@@ -73,12 +73,6 @@ namespace Chat.Web.Controllers
                 {
                     return BadRequest("Invalid user at room controller!");
                 }
-
-
-
-
-
-
 
 
                 rooms = await _context.Rooms.Include(r => r.Admin).Where(r => r.AdminId == adminId).ToListAsync();

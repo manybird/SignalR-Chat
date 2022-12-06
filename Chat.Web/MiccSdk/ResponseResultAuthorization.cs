@@ -14,7 +14,7 @@ namespace Chat.Web.MiccSdk
         public bool IsReady { get; set; }
         public bool IsRealtimeConnected { get; set; }
         public bool IsDataAccessConnected { get; set; }
-                
+        
         public override bool IsSuccess
         {
             get

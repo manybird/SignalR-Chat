@@ -102,8 +102,14 @@ $message-input-bg-color: #f5f5f5;
             }
 
             .post-image {
-                width: 100%;
+                /*width: 100%;*/
                 border-radius: 2px;
+            }
+
+            a {
+                div {                    
+                    overflow-wrap: break-word;
+                }
             }
         }
     }

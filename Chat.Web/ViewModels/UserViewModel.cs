@@ -29,5 +29,8 @@ namespace Chat.Web.ViewModels
     public class UserViewModelExt:UserViewModel
     {
         public string ConnectionId { get; set; }
+        public string AdminId { get; set; }
+
+        public string CaseId { get; set; }
     }
 }

@@ -4,7 +4,7 @@ namespace Chat.Web.MiccSdk
 {
     public class ResponseResultAuthorization : ResponseResult
     {
-        #region "Authorization"
+        #region "Authorization"        
         public override ResponseLinks _links { get; set; }
         public string Access_token { get; set; }
         public string Token_type { get; set; }

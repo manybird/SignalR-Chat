@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 
@@ -62,7 +63,8 @@ namespace Chat.Web.Controllers
                 return NotFound();
 
             var now = DateTime.Now;
-            var fileName = now.ToString("HHmmssf") + "_" + Path.GetFileName(uploadViewModel.File.FileName);
+            var oFileName = uploadViewModel.File.FileName;
+            var fileName = now.ToString("HHmmssf") + "_" + Path.GetFileName(oFileName);
 
             var roomName = string.Join('_', room.Name.Split(Path.GetInvalidPathChars(), StringSplitOptions.RemoveEmptyEntries));
 
@@ -79,14 +81,22 @@ namespace Chat.Web.Controllers
                 await uploadViewModel.File.CopyToAsync(fileStream);
             }
 
+            var ext = (Path.GetExtension(fileFullPath) ?? "").ToLower();
+
+
+
+            string iconPath = _getImageIcons(ext, relativePath);
+
+            
+
             string htmlImage = string.Format(
-                "<a href=\"{0}\" target=\"_blank\">" +
-                "<img src=\"{0}\" class=\"post-image\">" +
-                "</a>", relativePath);
+                "<a href='{0}' target='_blank'>" +
+                "<img src='{1}' class='post-image'>" +
+                "<div>{2}</div></a>", relativePath, iconPath,oFileName);
 
             var message = new Message()
             {
-                Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
+                Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|div|/div|/img).*?>", string.Empty),
                 Timestamp = DateTime.Now,
                 FromUser = user,
                 ToRoom = room,
@@ -103,6 +113,26 @@ namespace Chat.Web.Controllers
             await _hubContext.Clients.Group(room.Name).SendAsync("newMessage", messageViewModel);
 
             return Ok();
+        }
+
+        private string _getImageIcons(string ext, string relativePath)
+        {
+            string iconPath = relativePath;
+            if (string.Equals(ext, ".pdf"))
+            {
+                iconPath = "/images/file-download-64.png";
+            }
+            else if (string.Equals(ext, ".jpg") || string.Equals(ext, ".jpeg") || string.Equals(ext, ".png"))
+            {
+                //imgPath = relativePath;
+                iconPath = "/images/image-64.png";
+            }
+            else
+            {
+                iconPath = "/images/file-download-64.png";
+            }
+
+            return iconPath;
         }
 
         [HttpPost]

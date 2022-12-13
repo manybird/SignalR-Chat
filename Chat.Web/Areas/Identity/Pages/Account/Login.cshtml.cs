@@ -16,10 +16,13 @@ using Microsoft.AspNetCore.Server.HttpSys;
 using System.Web;
 using System.Collections.Specialized;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Chat.Web.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace Chat.Web.Areas.Identity.Pages.Account
 {
     [AllowAnonymous]
+    
     public class LoginModel : PageModel
     {
         public class InputModel
@@ -40,13 +43,16 @@ namespace Chat.Web.Areas.Identity.Pages.Account
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<LoginModel> _logger;
 
+        private readonly ApplicationDbContext _context;
+
         public LoginModel(SignInManager<ApplicationUser> signInManager, 
-            ILogger<LoginModel> logger,
+            ILogger<LoginModel> logger, ApplicationDbContext context,
             UserManager<ApplicationUser> userManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _logger = logger;
+            _context = context; 
         }
 
         [BindProperty]
@@ -99,7 +105,7 @@ namespace Chat.Web.Areas.Identity.Pages.Account
             {
                 ModelState.AddModelError(string.Empty, ErrorMessage);
             }
-
+            string conectionString = _context.Database.GetConnectionString();
             returnUrl = returnUrl ?? Url.Content("~/");
 
             // Clear the existing external cookie to ensure a clean login process

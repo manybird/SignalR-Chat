@@ -28,6 +28,7 @@ namespace Chat.Web
 {
     public class Startup
     {
+        public static Exception ex=null;
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -87,16 +88,24 @@ namespace Chat.Web
             });
 
             //services.AddHostedService<TimedHostedService>();
-
             //services.AddSingleton<ScopedProcessingService>();
-            services.AddHostedService<ConsumeScopedServiceHostedService>();
-            services.AddScoped<IScopedProcessingService, ScopedProcessingService>();
-
             //services.AddSingleton<MonitorWorker>();
             //services.AddHostedService<QueuedHostedService>();
             //services.AddSingleton<IBackgroundTaskQueue>(ctx => new BackgroundTaskQueue(appSettings.QueueCapacity));
-            
             //services.AddScoped<IScopedMonitorService, ScopedMonitorService>();
+
+
+            
+            services.AddHostedService<ConsumeScopedServiceHostedService>();
+            services.AddScoped<IScopedProcessingService, ScopedProcessingService>();
+            
+            services.AddLogging(o =>
+            {                
+                o.AddSimpleConsole(c =>
+                {
+                    c.TimestampFormat = "[yyyy-MM-dd HH:mm:ss]";
+                });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -114,7 +123,8 @@ namespace Chat.Web
             else
             {
                 app.UseExceptionHandler("/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+                // The default HSTS value is 30 days.
+                // You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
 
@@ -140,7 +150,14 @@ namespace Chat.Web
                 endpoints.MapHub<ChatHub>("/chatHub");
             });
 
-            AppDbContextSeedData.SeedData(app.ApplicationServices).Wait();
+            try
+            {
+                AppDbContextSeedData.InitDbAndSeedData(app.ApplicationServices).Wait();
+            }catch(Exception ex)
+            {
+                Startup.ex = ex;
+            }
+            
 
             //MonitorWorker.Run(app.ApplicationServices);
 

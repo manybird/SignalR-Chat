@@ -1,13 +1,16 @@
 ﻿using AutoMapper;
 using Chat.Web.Data;
 using Chat.Web.Helpers;
+using Chat.Web.MiccSdk;
 using Chat.Web.Models;
 using Chat.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.CodeAnalysis.Operations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using NuGet.Common;
 using System;
 using System.Collections.Generic;
@@ -47,14 +50,18 @@ namespace Chat.Web.Hubs
 
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly UserManager<ApplicationUser> _userManager;
-
+        private readonly Micc _micc;
+        private readonly ILogger<ChatHub> _logger;
         public ChatHub(ApplicationDbContext context, IMapper mapper
-            , RoleManager<ApplicationRole> roleManager , UserManager<ApplicationUser> userManager)
+            , RoleManager<ApplicationRole> roleManager , UserManager<ApplicationUser> userManager
+            ,Micc micc, ILogger<ChatHub> logger)
         {
             _context = context;
             _mapper = mapper;
             _roleManager = roleManager;
             _userManager = userManager;
+            _micc = micc;
+            _logger = logger;
         }
 
         public async Task SendPrivate(string receiverName, string message)
@@ -133,30 +140,60 @@ namespace Chat.Web.Hubs
                         return;
                     }
 
-                    var c1 = _context.Cases.FirstOrDefault(r => r.AdminId == room.AdminId && r.CaseCompletionDate == null);
+                    Case c1 = _context.Cases.FirstOrDefault(
+                         r => r.AdminId == room.AdminId && r.CaseCompletionDate == null
+                    );
 
                     var isUser = IsUser;
 
-                    // Only user can create case
-                    if (c1 == null && isUser)
+                    if (isUser)
                     {
-
-                        c1 = new Case(Guid.NewGuid().ToString())
+                        // Only user can create case
+                        if (c1 != null)
                         {
-                            AdminId = userView.AdminId,
-                            RoomId = room.Id,
-                        };
-                        
-                        _context.Cases.Add(c1);
-                        await _context.SaveChangesAsync();
-                    }                    
-                    
-                    //if (!isUser && c1 == null)
-                    //{
-                        //await SendErrorToCaller("Join room fail , No caseId found for: " + roomName);
-                        //return;
-                    //}
+                            var runner = new MiccRunner(_micc);
+                            var r = await runner.GetConversationById(c1.Id);
+                            //string url;
+                            if (r.IsSuccess)
+                            {
+                                if (r.IsCompleted(_micc.CompletedCaseFolders))
+                                {
+                                    c1.CaseCompletionDate = r.LastAgentActionDate?? DateTime.Now;                                    
+                                    c1.Folder = r.Folder;
+                                    await _context.SaveChangesAsync();
+                                    c1 = null;
+                                }
+                            }
+                            else if (r.StatusCode == 404)
+                            {
+                                //Keep use this caseId if 404/not found, the case should not started 
+                            }
+                            else
+                            {
+                                
+                                _logger.LogWarning("GetConversationById fail, complete it in DB. Id: {t0}", c1.Id);
+                                c1.CaseCompletionDate = DateTime.Now;
+                                await _context.SaveChangesAsync();
+                                c1 = null;                                 
+                                //await SendErrorToCaller("GetConversation fail! " );
+                                //return;
+                            }
+                        }
 
+                        if (c1 == null)
+                        {
+
+                            c1 = new Case(Guid.NewGuid().ToString())
+                            {
+                                AdminId = userView.AdminId,
+                                RoomId = room.Id,
+                            };
+
+                            _context.Cases.Add(c1);
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                                           
                     var roomViewModel = _mapper.Map<Room, RoomViewModel>(room);
 
                     if (c1 != null) roomViewModel.CaseId = c1.Id;

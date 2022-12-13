@@ -21,13 +21,15 @@
         <strong>ID2:</strong> <code>@Model.Id2</code>
     </p>
 }
-
-@foreach (var item in Model.Items)
-{
-    <div>
-        @item        
-    </div>
+@if (Model.Items!=null){
+    @foreach (var item in Model.Items)
+    {
+        <div>
+            @item
+        </div>
+    }
 }
+
 
 <h3>Development Mode</h3>
 <p>

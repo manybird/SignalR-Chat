@@ -3,8 +3,12 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+**/wwwroot/bundles
 Chat.Web.publish/*
 Chat.Web/.publish/*
+Chat.Web/.IisPublish/*
+
+
 
 # User-specific files
 *.rsuser

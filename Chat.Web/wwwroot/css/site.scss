@@ -4,6 +4,8 @@
 @import "_auth.scss";
 @import "_misc.scss";
 
+$flash-bg-color: #ff6a00;// #fbf8b2;
+
 body {
     background: white;
 }
@@ -33,5 +35,66 @@ body {
 
     .agents-container {        
         max-width: 150px;
+    }
+}
+
+.flashBackgroundAnimation {
+    animation: flashBackgroundAnimation 1s ease-out;
+    animation-iteration-count: 2;
+}
+
+@keyframes flashBackgroundAnimation {
+    0% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: $flash-bg-color;
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+@-webkit-keyframes flashBackgroundAnimation {
+    0% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: $flash-bg-color;
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+@-moz-keyframes flashBackgroundAnimation {
+    0% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: $flash-bg-color;
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+@-ms-keyframes flashBackgroundAnimation {
+    0% {
+        background-color: transparent;
+    }
+
+    50% {
+        background-color: $flash-bg-color;
+    }
+
+    100% {
+        background-color: transparent;
     }
 }

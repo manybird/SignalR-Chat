@@ -48,8 +48,7 @@ namespace Chat.Web.Controllers
             _environment = environment;
             //_hubContext = hubContext;
             _fileValidator = fileValidator;
-            //FileSizeLimit = configruation.GetSection("FileUpload").GetValue<int>("FileSizeLimit");
-            //AllowedExtensions = configruation.GetSection("FileUpload").GetValue<string>("AllowedExtensions").Split(",");
+            
         }
 
         private async Task<IActionResult> UploadAction([FromForm] UploadViewModel uploadViewModel, ApplicationUser user)
@@ -71,7 +70,7 @@ namespace Chat.Web.Controllers
             var folderPath = Path.Combine(_environment.WebRootPath, "uploads", roomName, now.ToString("yyyyMM"));
             var fileFullPath = Path.Combine(folderPath, fileName);
 
-            var relativePath = fileFullPath.Replace(_environment.WebRootPath, "").Replace(Path.DirectorySeparatorChar, '/');
+            var relativePath = fileFullPath.Replace(_environment.WebRootPath, PathBase).Replace(Path.DirectorySeparatorChar, '/');
 
             if (!Directory.Exists(folderPath))
                 Directory.CreateDirectory(folderPath);
@@ -83,12 +82,7 @@ namespace Chat.Web.Controllers
 
             var ext = (Path.GetExtension(fileFullPath) ?? "").ToLower();
 
-
-
             string iconPath = _getImageIcons(ext, relativePath);
-
-            
-
             string htmlImage = string.Format(
                 "<a href='{0}' target='_blank'>" +
                 "<img src='{1}' class='post-image'>" +
@@ -103,6 +97,7 @@ namespace Chat.Web.Controllers
                 MessageType = 1,
                 FileFullPath = fileFullPath,
                 RelativePath = relativePath,
+                CaseId = uploadViewModel.CaseId,
             };
 
             await _context.Messages.AddAsync(message);
@@ -114,22 +109,23 @@ namespace Chat.Web.Controllers
 
             return Ok();
         }
-
+        private string PathBase { get { return HttpContext.Request.PathBase; } }
         private string _getImageIcons(string ext, string relativePath)
         {
             string iconPath = relativePath;
+            var p = PathBase;
             if (string.Equals(ext, ".pdf"))
             {
-                iconPath = "/images/file-download-64.png";
+                iconPath =p + "/images/file-download-64.png";
             }
             else if (string.Equals(ext, ".jpg") || string.Equals(ext, ".jpeg") || string.Equals(ext, ".png"))
             {
                 //imgPath = relativePath;
-                iconPath = "/images/image-64.png";
+                iconPath = p + "/images/image-64.png";
             }
             else
             {
-                iconPath = "/images/file-download-64.png";
+                iconPath = p + "/images/file-download-64.png";
             }
 
             return iconPath;

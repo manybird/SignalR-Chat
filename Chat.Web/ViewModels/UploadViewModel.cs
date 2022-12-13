@@ -13,5 +13,7 @@ namespace Chat.Web.ViewModels
         public int RoomId { get; set; }
         [Required]
         public IFormFile File { get; set; }
+        [Required]
+        public string CaseId { get; set; }
     }
 }

@@ -17,9 +17,16 @@ namespace Chat.Web
         public static void Main(string[] args)
         {
             var host = CreateHostBuilder(args).Build();                        
-            host.Run();
+            //host.Run();
+            host.Start();   
 
-
+            if (Startup.ex != null)
+            {
+                Console.WriteLine(Startup.ex.Message);
+                Console.WriteLine(Startup.ex.StackTrace);
+                Console.ReadLine();
+            }
+            host.WaitForShutdown();
 
             //host.Start();                        
             //var monitorLoop = host.Services.GetRequiredService<MonitorLoop>();

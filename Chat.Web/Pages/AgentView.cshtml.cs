@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -13,6 +14,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Chat.Web.Pages
@@ -26,13 +28,14 @@ namespace Chat.Web.Pages
         public string CaseId { get; set; }
         public string AdminId { get; set; }
         public string Na1ta { get; set; }
-
+        public string AllowedExtensions { get; set; }
         public AgentViewModel(ILogger<AgentViewModel> logger, ApplicationDbContext context, IMapper mapper,
-            IHubContext<ChatHub> hubContext, UserManager<ApplicationUser> userManager,
+            IHubContext<ChatHub> hubContext, UserManager<ApplicationUser> userManager, IConfiguration configuration,
             RoleManager<ApplicationRole> roleManager, Micc micc)
             : base(context, mapper, hubContext, userManager, roleManager, micc)
         {
             _logger = logger;
+            AllowedExtensions = configuration.GetValue("FileUpload:AllowedExtensions", ".jpg,.jpeg,.png");
         }
 
         public async Task<IActionResult> OnGet(string adminId, string caseId)

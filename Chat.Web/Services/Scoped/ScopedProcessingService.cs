@@ -208,9 +208,7 @@ namespace Chat.Web.Services.Scoped
 
                 if (responseResult.IsSuccess)
                 {
-                    var newConversation = responseResult;
-
-                    
+                    var newConversation = responseResult;                                       
 
                     if (IsConversationStateChanged(newConversation, c.ConnectionId))
                     {
@@ -233,7 +231,7 @@ namespace Chat.Web.Services.Scoped
                     }
                     else
                     {
-                        _logger.LogInformation("Micc ok, state not changed {t0} {t1},", _connectionsMap.Count, _lastConversations.Count);
+                        _logger.LogDebug("Micc ok, state not changed {t0} {t1},", _connectionsMap.Count, _lastConversations.Count);
                     }
                 }
                 else if (responseResult.StatusCode == 404)

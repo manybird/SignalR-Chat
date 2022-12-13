@@ -24,7 +24,9 @@ namespace Chat.Web.MiccSdk
         public string Message { get; set; }
         public string ResponseCode { get; set; }
         public string ResponseHeaders { get; set; }
-        public string ResponseBody { get; set; }
+
+        [JsonIgnore]
+        public virtual string ResponseBody { get; set; }
 
         public int StatusCode;
 

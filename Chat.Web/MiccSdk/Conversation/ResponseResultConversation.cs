@@ -32,6 +32,10 @@ namespace Chat.Web.MiccSdk.Conversation
     }
     public class ResponseResultConversation : ResponseResult
     {
+        [JsonIgnore]
+        public override string ResponseBody { get; set; }
+
+        [JsonIgnore]
         public override ResponseLinks _links { get; set; }
         public override bool IsSuccess => (IsSuccessStatusCode) && !string.IsNullOrEmpty(ConversationId);
         public string ConversationId { get; set; }
@@ -94,14 +98,27 @@ namespace Chat.Web.MiccSdk.Conversation
         public DateTime? TimeOfferedToQueue { get; set; }
 
         public DateTime? TimeOfLastAgentResponse { get; set; }
+        public DateTime? LastAgentActionDate { get; set; }
+        
         public DateTime? TimeOfLastCustomerResponse { get; set; }
-                   
+
+        public static string IN_QUEUE_KEY = "InQueue";
+
+        public bool IsInQueue()
+        {
+            return (string.Equals(this.Folder, IN_QUEUE_KEY, StringComparison.InvariantCultureIgnoreCase));
+        }
 
         public override string GetContentMessage()
         {
             var result = this;
             if (result.IsSuccess)
-                return string.Format("{0} - {1} - Position {2}", Folder,ConversationState,PositionInQueue);
+            {
+                if (IsInQueue()) return string.Format("{0} - Position {1}", Folder, PositionInQueue);
+
+                return string.Format("{0}", Folder);
+            }
+                
             else
                 return result.Error;
         }

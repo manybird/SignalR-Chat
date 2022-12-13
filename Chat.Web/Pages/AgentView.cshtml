@@ -1,6 +1,7 @@
 ﻿@page "{adminId?}/{caseId?}"
 @model AgentViewModel
 
+<input value="@HttpContext.Request.PathBase" id="hiddenPathBase" type="hidden" />
 <div class="alert alert-warning alert-dismissible d-none" id="errorAlert" role="alert">
     <span data-bind="text:serverInfoMessage"></span>
     <button type="button" class="btn-close" aria-label="Close"></button>
@@ -96,7 +97,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-image"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                     </label>
                     <input type="hidden" name="RoomId" data-bind="value: joinedRoomId()" />
-                    <input type="file" id="UploadedFile" name="File" accept=".pdf,.jpg,.jpeg,.png" data-bind="event: {change: uploadFiles}">
+                    <input type="hidden" name="CaseId" data-bind="value: caseId()" />
+                    <input type="file" id="UploadedFile" name="File" accept="@Model.AllowedExtensions" data-bind="event: {change: uploadFiles}">
                 </form>
                 <a role="button" id="btn-show-emojis">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-smile"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg>

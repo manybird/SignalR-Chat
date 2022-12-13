@@ -1,26 +1,43 @@
-﻿$(document).ready(function () {
+﻿function toggleRequestServiceModal() {    
+    $('#request-service-modal').modal('toggle');
+    //$('.divChatMainHeader').toggle();
+    
+}
 
+function hideRequestServiceModal() {
+    if ($('#request-service-modal').hasClass('in')); {
+        //$('.divChatMainHeader').show();
+        $('#request-service-modal').modal('hide');
+    }        
+}
+
+$(document).ready(function () {
     //#region connection for hub
-
-    var connection = new signalR.HubConnectionBuilder().withUrl("/chatHub").build();
+    var PathBase = $('#hiddenPathBase').val();
+    var connection = new signalR.HubConnectionBuilder().withUrl(PathBase + "/chatHub").build();
     //connection.logging = true;
-
+    $('#request-service-modal').modal({ backdrop: 'static', keyboard: false });
     
     async function startSignalR() {
+        toggleRequestServiceModal();
         console.log('SignalR starting...')
         connection.start().then(function () {
             console.log('SignalR connection Started...')
             connection.connectionId = connection.connection.connectionId;
             viewModel.roomList();
-            viewModel.userList();
+            viewModel.userList();            
         }).catch(function (err) {
             return console.error(err);
         });
     }
 
+    //onclose
     connection.onclose(async () => {
         console.log('connection.onclose');
-        //await startSignalR();
+        //await startSignalR
+        viewModel.conversationCompletedMessage('Connection lost!');
+        viewModel.conversationCompleted(true);
+        /*location.href = location.href;*/
     });
 
     startSignalR();
@@ -31,16 +48,19 @@
         var message = new ChatMessage2(messageView, isMine);
         viewModel.chatMessages.push(message);
         //$(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 0);
-        ScrollToEnd(".messages-container");
+        //ScrollToEnd(".messages-container");
+        ScrollToEnd();
     });
 
     //on new system Message
     connection.on("newSystemMessage", function (messageView) {        
-        var message = new ChatMessage2(messageView, false, true);
-
         console.log('newSystemMessage', messageView.conversation);
-
+        /*
+        var message = new ChatMessage2(messageView, false, true);
+        
         viewModel.chatMessages.push(message);
+        */
+
         //$(".messages-container").animate({ scrollTop: $(".messages-container")[0].scrollHeight }, 0);
         ScrollToEnd(".messages-container");
     });
@@ -68,13 +88,15 @@
 
     //addUser , Other user join to this chat room
     connection.on("addUser", function (user) {
-        console.log("addUser", user);
-        viewModel.userAdded(new ChatUser(user.username, user.fullName, user.avatar, user.currentRoom, user.device,user.connectionId));
+        //console.log("addUser", user);
+        viewModel.userAdded(new ChatUser(user.username, user.fullName, user.avatar, user.currentRoom, user.device, user.connectionId));
+        viewModel.queryConversationState();
     });
 
     //removeUser
     connection.on("removeUser", function (user) {
         viewModel.userRemoved(user.connectionId);
+        viewModel.queryConversationState();
     });
 
     //addChatRoom
@@ -122,14 +144,18 @@
     //onConversationStateUpdate
     connection.on("onConversationStateUpdate", function (obj) {
         //if (!viewModel.isMonitoring()) return;
-        //console.log("onConversationStateUpdate", obj.conversation);        
-        viewModel.setConversationState(obj.conversation);
+        console.log("onConversationStateUpdate", obj.conversation);        
+        const conversation = obj.conversation;
+
+        if (conversation && conversation.folder) {
+            hideRequestServiceModal();
+        }
+
+        viewModel.setConversationState(conversation);        
+        viewModel.addOrUpdateSystemMessage(conversation);
     });
 
-    //error
     
-    
-
     //#endregion
 
     
@@ -139,6 +165,8 @@
 
         self.adminId = ko.observable("");
         self.caseId = ko.observable("");
+        self.conversationCompleted = ko.observable(false);
+        self.conversationCompletedMessage = ko.observable('Conversation ended!');
                 
         self.message = ko.observable("");
         self.chatRooms = ko.observableArray([]);
@@ -164,6 +192,15 @@
         self.isMonitoring = ko.observable(false);
 
         self.setConversationState = function (conversation) {
+
+            if (conversation) {
+                if (conversation.positionInQueue != self.positionInQueue())
+                    animateBackground('.spanPositionInQueue');
+
+                if (conversation.folder != self.folder())
+                    animateBackground('.spanFolder');
+            }
+           
             if (!conversation) {                
                 self.folder('');
                 self.conversationState('');
@@ -172,20 +209,40 @@
                 if ( conversation.folder==null) conversation.folder = '';
                 self.folder(conversation.folder);
                 self.conversationState(conversation.conversationState);
-                self.positionInQueue(conversation.positionInQueue);
-            }
+                self.positionInQueue(conversation.positionInQueue);                
+            } 
+            
+        }
+
+        self.queryConversationState = function () {
+
+            fetch(PathBase + '/api/UserAction/RequestMonitorState', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ adminId: self.adminId(), connectionId: connection.connectionId, caseId:self.caseId() })
+            }).then(function (response) {
+                if (!response.ok) return null;                
+                const p = response.json();
+                p.then(function (obj) {
+                    
+                    if (!obj) return;
+                    console.log('queryConversationState', obj);
+                    self.addOrUpdateSystemMessage(obj.conversation);
+                });
+                return p;
+            }).then(self.handleErrorIfAny);
         }
 
         self.startMonitorQueueState = function (conversation) {                      
 
-            self.setConversationState(conversation);
+            self.addOrUpdateSystemMessage(conversation);
             if (!self.isMonitoring()) return;
 
             return;
 
             setTimeout(function () {
                 if (!self.isMonitoring()) return;
-                fetch('/api/UserAction/RequestMonitorState', {
+                fetch(PathBase + '/api/UserAction/RequestMonitorState', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ adminId: self.adminId(), connectionId: connection.connectionId })
@@ -209,7 +266,7 @@
         }
         
         self.onRequestCustomerServiceClick = function (o, i) {                                    
-            fetch('/api/UserAction/RequestCustomerService', {
+            fetch(PathBase + '/api/UserAction/RequestCustomerService', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adminId: self.adminId(), content: '', connectionId: connection.connectionId,caseId:self.caseId() })
@@ -217,9 +274,14 @@
                 if (!response.ok) return null;
                 const p = response.json();
                 p.then(function (obj) {
-                    console.log(obj);
-                    self.isMonitoring(true);
-                    self.startMonitorQueueState(obj.conversation);
+                    var conversation = obj.conversation;
+                                        
+                    if (!conversation.folder) {
+                        console.log('onRequestCustomerServiceClick', conversation);
+                        conversation = { folder: 'Request sent' };
+                    }
+                    
+                    self.addOrUpdateSystemMessage(conversation);
                 });
                 return p;
             }).then(self.handleErrorIfAny);
@@ -228,7 +290,7 @@
         self.onShowOrderDetail = function (o, i) {
             console.log('onShowOrderDetail', this);
 
-            fetch('/api/UserAction/ShowOrderDetail', {
+            fetch(PathBase + '/api/UserAction/ShowOrderDetail', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adminId: self.adminId(), content: '' }),
@@ -273,7 +335,7 @@
 
         self.sendToRoom = function (roomName, message) {
             if (roomName.length > 0 && message.length > 0) {
-                fetch('/api/Messages', {
+                fetch(PathBase + '/api/Messages', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ room: roomName, content: message, caseId:self.caseId() })
@@ -289,14 +351,15 @@
 
         self.joinRoom = function (room) {
             self.joinedRoom(room.name());
-            self.joinedRoomId(room.id());   
+            self.joinedRoomId(room.id());
             connection.invoke("Join", room.name()).then(function () {                             
                 self.userList();
+                   
             });
         }
 
         self.roomList = function () {
-            fetch('/api/Rooms')
+            fetch(PathBase + '/api/Rooms')
                 .then(response => response.json())
                 .then(data => {
                     self.chatRooms.removeAll();
@@ -335,7 +398,7 @@
 
         self.createRoom = function () {
             var roomName = $("#roomName").val();
-            fetch('/api/Rooms', {
+            fetch(PathBase + '/api/Rooms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: roomName,operationMode:0 })
@@ -345,7 +408,7 @@
         self.editRoom = function () {
             var roomId = self.joinedRoomId();
             var roomName = $("#newRoomName").val();
-            fetch('/api/Rooms/' + roomId, {
+            fetch(PathBase + '/api/Rooms/' + roomId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: roomId, name: roomName })
@@ -353,7 +416,7 @@
         }
 
         self.deleteRoom = function () {
-            fetch('/api/Rooms/' + self.joinedRoomId(), {
+            fetch(PathBase + '/api/Rooms/' + self.joinedRoomId(), {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: self.joinedRoomId() })
@@ -363,7 +426,7 @@
         self.deleteMessage = function () {
             var messageId = $("#itemToDelete").val();
 
-            fetch('/api/Messages/' + messageId, {
+            fetch(PathBase + '/api/Messages/' + messageId, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: messageId })
@@ -371,8 +434,7 @@
         }
 
         self.messageHistory = function () {
-            const url = `/api/Messages/Room/${self.joinedRoom()}/${self.caseId()}`;
-            
+            const url = PathBase + `/api/Messages/Room/${self.joinedRoom()}/${self.caseId()}`;            
             fetch(url) //+'/5'
                 .then(response => response.json())
                 .then(data => {
@@ -380,10 +442,11 @@
                     for (var i = 0; i < data.length; i++) {
                         var d = data[i];
                         var isMine = d.from == self.myName();
-                        self.chatMessages.push(new ChatMessage(d.id, d.content, d.timestamp, d.from, isMine, d.avatar));
+                        var cm = new ChatMessage(d.id, d.content, d.timestamp, d.from, isMine, d.avatar);
+                        self.chatMessages.push(cm);
                     }
 
-                    ScrollToEnd(".messages-container");
+                    ScrollToEnd();
                 });
         }
 
@@ -446,7 +509,7 @@
             var form = document.getElementById("uploadForm");
             $.ajax({
                 type: "POST",
-                url: '/api/Upload',
+                url: PathBase + '/api/Upload',
                 data: new FormData(form),
                 contentType: false,
                 processData: false,
@@ -458,8 +521,73 @@
                 }
             });
         }
+
+        self.addOrUpdateSystemMessage = function (conversation) {
+
+            if (conversation.folder === 'Inbox') conversation.folder = 'In service';
+
+            if (conversation.completed) {
+                console.log('conversation completed');
+                self.conversationCompleted(conversation.completed);
+            }
+                        
+            //var lastMessage = ko.utils.arrayFirst(self.chatMessages(), function (item) {
+            //    return item.id === -1;
+            //});
+            var lastMessage = null;
+            var msgs = self.chatMessages();
+            var len = msgs.length;
+            if (len > 0) {
+                var tmp = msgs[len - 1];
+                if (tmp.isSystemMessage()) {
+                    lastMessage = tmp;
+                }
+            }
+            var cm = new ChatMessage3(conversation); 
+            //console.log('addOrUpdateSystemMessage', cm);
+            if (lastMessage) {                
+                self.chatMessages.replace(lastMessage, cm);
+                if (lastMessage.content !== cm.content)
+                    setTimeout(function () { animateBackground('#' + cm.divId()); }, 10);
+            } else {
+                self.chatMessages.push(cm);
+                ScrollToEnd();
+                setTimeout(function () { animateBackground('#' + cm.divId()); }, 10);
+            }
+
+            
+                
+            
+            
+        }
+
+        self.retryConversation = function () {
+            console.log('retryConversation');
+            window.location.href = window.location.href;
+        }
     }
+    function animateBackground(container) {
+        
+        var c = $(container);
+              
+
+        if (c.length == 0) { console.log('animateBackground fail: ' + container, c); return; } 
+        var c0 = c[0];        
+        
+        if (c0.timeoutKey) {        
+            clearTimeout(c0.timeoutKey);
+            c.removeClass('flashBackgroundAnimation');
+        }
+
+        c.addClass('flashBackgroundAnimation');
+        c0.timeoutKey = setTimeout(function () {
+            c.removeClass('flashBackgroundAnimation');
+        }, 2000);
+
+    }
+    
     function ScrollToEnd(container, lastScrollTop) {
+        if (!container) container = '.messages-container';
         var c = $(container);
         const cc = c[0];
 
@@ -468,7 +596,7 @@
             {
                 duration: 800,
                 complete: function () {
-                    console.log('ScrollToEnd completed');
+                    
                     if (lastScrollTop == cc.scrollTop) return;
                     ScrollToEnd(container, cc.scrollTop);
                 }
@@ -491,6 +619,16 @@
         self.connectionId = ko.observable(connectionId);
     }
 
+    function ChatMessage3(conversasion) {
+        const c = conversasion;        
+        const content = c.folder === 'InQueue' ?   'Position in queue: ' + c.positionInQueue:c.folder;
+        
+        var msg = new ChatMessage(Date.now(), content, null, '', false, null);
+        msg.divId ('divMsg' + msg.id());
+        msg.isSystemMessage(true);
+        return msg;
+    }
+
     function ChatMessage2(messageView, isMine, isSystemMessage) {  
         const mv = messageView;
         var msg = new ChatMessage(mv.id, mv.content, mv.timestamp, mv.from, isMine, mv.avatar);
@@ -502,7 +640,8 @@
     function ChatMessage(id, content, timestamp, from, isMine, avatar) {
         var self = this;
         self.isSystemMessage = ko.observable(false);
-        self.id = ko.observable(id);
+        self.id = ko.observable(id);        
+        self.divId = ko.observable(null);  
 
         self.content = ko.observable(content);
         self.timestamp = ko.observable(timestamp);

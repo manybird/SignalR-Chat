@@ -20,14 +20,19 @@ namespace Chat.Web.Data
         //    _userManager = userManager;
         //}
 
-        public async static Task SeedData(IServiceProvider services)
+        public async static Task InitDbAndSeedData(IServiceProvider services)
         {
             using (var scope = services.CreateScope())
             {
                 UserManager<ApplicationUser> _userManager = scope.ServiceProvider.GetService<UserManager<ApplicationUser>>();
                 ApplicationDbContext _context = scope.ServiceProvider.GetService<ApplicationDbContext>();
 
-                //Auto Create db?
+                //if (!await _context.Database.CanConnectAsync())
+                //{
+                //    throw new Exception("Connect to db fail: " + _context.Database.GetConnectionString());
+                //}
+
+                //Migrate db if any
                 await _context.Database.MigrateAsync();
 
                 RoleManager<ApplicationRole> _roleManager = scope.ServiceProvider.GetService<RoleManager<ApplicationRole>>();

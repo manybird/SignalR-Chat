@@ -21,7 +21,7 @@
     "IIS2": {
       "commandName": "IIS",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Test"
+        "ASPNETCORE_ENVIRONMENT": "Development"
       }
     }
   },
@@ -29,7 +29,7 @@
     "windowsAuthentication": false,
     "anonymousAuthentication": true,
     "iis": {
-      "applicationUrl": "http://localhost:81",
+      "applicationUrl": "http://localhost/chat2",
       "sslPort": 0
     },
     "iisExpress": {

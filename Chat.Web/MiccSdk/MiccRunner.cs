@@ -149,8 +149,6 @@ namespace Chat.Web.MiccSdk
             return result;
         }
 
-
-
         public async Task<ResponseResultOpenMediaConversation> PostOpenMediaConversation(string chatId, string caseId, string name, string email)
         {
             var result = new ResponseResultOpenMediaConversation();
@@ -198,7 +196,7 @@ namespace Chat.Web.MiccSdk
                         result.ResponseBody = body;
                     }
                     result.ResponseCode = rep.StatusCode.ToString();
-                    result.ResponseBody = body;
+                    //result.ResponseBody = body;
                     result.StatusCode = (int)rep.StatusCode;
                 }
 
@@ -213,7 +211,7 @@ namespace Chat.Web.MiccSdk
         }
 
 
-        public async Task<ResponseResultOpenMediaConversation> GetOpenMediaConversationById(string adminId)
+        public async Task<ResponseResultOpenMediaConversation> GetOpenMediaConversationById(string caseId)
         {
             var result = new ResponseResultOpenMediaConversation();
 
@@ -230,7 +228,7 @@ namespace Chat.Web.MiccSdk
                 var request = new HttpRequestMessage()
                 {
                     Method = HttpMethod.Get,
-                    RequestUri = new Uri(micc.UrlOpenMediaById(adminId)),
+                    RequestUri = new Uri(micc.UrlOpenMediaById(caseId)),
                     //Content = new StringContent(JsonConvert.SerializeObject(requestBody), Encoding.UTF8, MediaTypeNames.Application.Json)
 
                 };
@@ -256,7 +254,7 @@ namespace Chat.Web.MiccSdk
                         result.ResponseBody = body;
                     }
                     result.ResponseCode = rep.StatusCode.ToString();
-                    result.ResponseBody = body;
+                    //result.ResponseBody = body;
                     result.StatusCode = (int)rep.StatusCode;
 
                     if (rep.StatusCode == HttpStatusCode.NotFound)
@@ -275,14 +273,22 @@ namespace Chat.Web.MiccSdk
             return result;
         }
 
-        public async Task<ResponseResultConversation> GetConversationById(string adminId)
+        public async Task<ResponseResultConversation> GetConversationById(string caseId)
         {
-            return await MiccGet<ResponseResultConversation>(micc.UrlConversationById(adminId));
+            var r1 = await MiccGet<ResponseResultConversation>(micc.UrlConversationById(caseId));
+            if (r1 == null) return r1;
+            if (!r1.IsInQueue()) return r1;            
+            var r2 = await GetOpenMediaConversationById(caseId);
+
+            if (r2 != null && r2.IsSuccess)                        
+                r1.PositionInQueue = r2.PositionInQueue;
+           
+            return r1;
         }
 
-        public async Task<ResponseResultConversations> GetConversationsById(string adminId)
+        public async Task<ResponseResultConversations> GetConversationsById(string caseId)
         {
-            return await MiccGet<ResponseResultConversations>(micc.UrlConversationById(adminId));
+            return await MiccGet<ResponseResultConversations>(micc.UrlConversationById(caseId));
         }
         public async Task<T> MiccGet<T>(string url) where T : ResponseResult
         {
@@ -324,7 +330,7 @@ namespace Chat.Web.MiccSdk
                         result.ResponseBody = body;
                     }
                     result.ResponseCode = rep.StatusCode.ToString();
-                    result.ResponseBody = body;
+                    //result.ResponseBody = body;
                     result.StatusCode = (int)rep.StatusCode;
 
                     if (rep.StatusCode == HttpStatusCode.NotFound)

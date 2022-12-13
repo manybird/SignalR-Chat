@@ -1,13 +1,15 @@
-﻿$(document).ready(function () {
+﻿
+
+$(document).ready(function () {
 
     //#region connection for hub
     const na1ta = $('#inputNa1ta').val();
     //console.log(`na1ta: ${na1ta}`);
 
     const caseId = $('#inputCaseId').val();
+    const PathBase = $('#hiddenPathBase').val();
     
-    
-    var connection = new signalR.HubConnectionBuilder().withUrl(`/chatHub?na1ta=${na1ta}`).build();
+    var connection = new signalR.HubConnectionBuilder().withUrl(`${PathBase}/chatHub?na1ta=${na1ta}`).build();
 
     connection.start().then(function () {
         console.log('SignalR connection Started...')
@@ -173,7 +175,7 @@
 
         self.sendToRoom = function (roomName, message) {
             if (roomName.length > 0 && message.length > 0) {
-                fetch('/api/Messages/ByAgent/' + self.na1ta(), {
+                fetch(PathBase + '/api/Messages/ByAgent/' + self.na1ta(), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ room: roomName, content: message, caseId:self.caseId() })
@@ -196,9 +198,9 @@
             });
         }
 
-        self.roomList = function () {
-            //var u = `/api/Rooms/ByAdminId`;
-            var u = `/api/Rooms/ByAdminId/${self.adminId()}`;
+        self.roomList = function () {         
+            console.log('room list url: ' + PathBase);
+            var u = PathBase + `/api/Rooms/ByAdminId/${self.adminId()}`;
             console.log('room list url: ' + u);
             fetch(u).then(response => response.json())
             .then(data => {
@@ -238,7 +240,7 @@
 
         self.createRoom = function () {
             var roomName = $("#roomName").val();
-            fetch('/api/Rooms', {
+            fetch(PathBase + '/api/Rooms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: roomName,operationMode:0 })
@@ -248,7 +250,7 @@
         self.editRoom = function () {
             var roomId = self.joinedRoomId();
             var roomName = $("#newRoomName").val();
-            fetch('/api/Rooms/' + roomId, {
+            fetch(PathBase + '/api/Rooms/' + roomId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: roomId, name: roomName })
@@ -256,7 +258,7 @@
         }
 
         self.deleteRoom = function () {
-            fetch('/api/Rooms/' + self.joinedRoomId(), {
+            fetch(PathBase + '/api/Rooms/' + self.joinedRoomId(), {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: self.joinedRoomId() })
@@ -266,7 +268,7 @@
         self.deleteMessage = function () {
             var messageId = $("#itemToDelete").val();
 
-            fetch('/api/Messages/' + messageId, {
+            fetch(PathBase + '/api/Messages/' + messageId, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: messageId })
@@ -274,7 +276,7 @@
         }
 
         self.messageHistory = function () {
-            const url = `/api/Messages/RoomB/${self.joinedRoom()}/${self.caseId()}`;
+            const url = PathBase + `/api/Messages/RoomB/${self.joinedRoom()}/${self.caseId()}`;
             fetch(url) //+'/5'
                 .then(response => response.json())
                 .then(data => {
@@ -346,7 +348,7 @@
             var form = document.getElementById("uploadForm");
             $.ajax({
                 type: "POST",
-                url: '/api/Upload/ByAgent/' + self.na1ta(),
+                url: PathBase + '/api/Upload/ByAgent/' + self.na1ta(),
                 data: new FormData(form),
                 contentType: false,
                 processData: false,

@@ -30,6 +30,8 @@ namespace Chat.Web.Pages
         public string Na1ta { get; set; }
         public string AllowedExtensions { get; set; }
         public AgentViewModel(ILogger<AgentViewModel> logger, ApplicationDbContext context, IMapper mapper,
+            IHubContext<ChatHub> hubContext, UserManager<ApplicationUser> userManager,
+            IConfiguration configuration,
             RoleManager<ApplicationRole> roleManager, Micc micc)
             : base(context, mapper, hubContext, userManager, roleManager, micc)
         {

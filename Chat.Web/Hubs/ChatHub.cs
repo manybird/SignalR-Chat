@@ -1,13 +1,21 @@
 ﻿using AutoMapper;
 using Chat.Web.Data;
 using Chat.Web.Helpers;
+
 using Chat.Web.MiccSdk;
+
 using Chat.Web.Models;
 using Chat.Web.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.SignalR;
+
+using Microsoft.CodeAnalysis.Operations;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+
+using NuGet.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,10 +52,23 @@ namespace Chat.Web.Hubs
         private readonly ApplicationDbContext _context;
         private readonly IMapper _mapper;
 
-        public ChatHub(ApplicationDbContext context, IMapper mapper)
+        private readonly RoleManager<ApplicationRole> _roleManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        private readonly Micc _micc;
+        private readonly ILogger<ChatHub> _logger;
+        public ChatHub(ApplicationDbContext context, IMapper mapper
+            , RoleManager<ApplicationRole> roleManager , UserManager<ApplicationUser> userManager
+            ,Micc micc, ILogger<ChatHub> logger)
+
         {
             _context = context;
             _mapper = mapper;
+            _roleManager = roleManager;
+            _userManager = userManager;
+
+            _micc = micc;
+            _logger = logger;
         }
 
         public async Task SendPrivate(string receiverName, string message)
@@ -116,16 +137,85 @@ namespace Chat.Web.Hubs
                     userView.CurrentRoom = roomName;
 
                     // Tell others to update their list of users
-                    await Clients.OthersInGroup(roomName).SendAsync("addUser", user);
+                    await Clients.OthersInGroup(roomName).SendAsync("addUser", userView);
+
+                    var room = _context.Rooms.FirstOrDefault(r => r.Name == roomName);
+
+                    if (room == null)
+                    {
+                        await SendErrorToCaller("Get room fail: " + roomName);
+                        return;
+                    }
+
+
+                    Case c1 = _context.Cases.FirstOrDefault(
+                         r => r.AdminId == room.AdminId && r.CaseCompletionDate == null
+                    );
+
+                    var isUser = IsUser;
+
+                    if (isUser)
+                    {
+                        // Only user can create case
+                        if (c1 != null)
+                        {
+                            var runner = new MiccRunner(_micc);
+                            var r = await runner.GetConversationById(c1.Id);
+                            //string url;
+                            if (r.IsSuccess)
+                            {
+                                if (r.IsCompleted(_micc.CompletedCaseFolders))
+                                {
+                                    c1.CaseCompletionDate = r.LastAgentActionDate?? DateTime.Now;                                    
+                                    c1.Folder = r.Folder;
+                                    await _context.SaveChangesAsync();
+                                    c1 = null;
+                                }
+                            }
+                            else if (r.StatusCode == 404)
+                            {
+                                //Keep use this caseId if 404/not found, the case should not started 
+                            }
+                            else
+                            {
+                                
+                                _logger.LogWarning("GetConversationById fail, complete it in DB. Id: {t0}", c1.Id);
+                                c1.CaseCompletionDate = DateTime.Now;
+                                await _context.SaveChangesAsync();
+                                c1 = null;                                 
+                                //await SendErrorToCaller("GetConversation fail! " );
+                                //return;
+                            }
+                        }
+
+                        if (c1 == null)
+                        {
+
+                            c1 = new Case(Guid.NewGuid().ToString())
+                            {
+                                AdminId = userView.AdminId,
+                                RoomId = room.Id,
+                            };
+
+                            _context.Cases.Add(c1);
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+                                           
+
+                    var roomViewModel = _mapper.Map<Room, RoomViewModel>(room);
+
+                    if (c1 != null) roomViewModel.CaseId = c1.Id;
+                    if (IsUser) UpdateCaseID(roomViewModel);
+                    
+                    await Clients.Caller.SendAsync("onRoomJoinCompleted", roomViewModel);
+
                 }
             }
             catch (Exception ex)
-            {
-                await Clients.Caller.SendAsync("onError", "You failed to join the chat room!" + ex.Message);
+            {                
+                await SendErrorToCaller("Failed to join room! " + ex.Message);
             }
-
-            if (userViewModel == null) return;
-            ConnectionChanged(this, userViewModel, true);
         }
 
         private void UpdateCaseID(RoomViewModel roomViewModel)
@@ -199,14 +289,21 @@ namespace Chat.Web.Hubs
 
                 userViewModel.Device = GetDevice();
                 userViewModel.CurrentRoom = "";
+                userViewModel.ConnectionId = cId;
 
-                if (!_Connections.Any(u => u.Username == IdentityName))
-                {
-                    _Connections.Add(userViewModel);
-                    _ConnectionsMap.Add(IdentityName, Context.ConnectionId);
-                }
+                //var r = _Connections.RemoveAll(u => string.Equals(u.Username, IdentityName, StringComparison.InvariantCultureIgnoreCase));
 
-                Clients.Caller.SendAsync("getProfileInfo", user.FullName, user.Avatar);
+                //_Connections.Add(userViewModel);
+
+                if (!_connectionsMap.ContainsKey(cId))
+                    _connectionsMap.Add(cId, userViewModel);
+                else
+                    _connectionsMap[cId] = userViewModel;
+
+                ConnectionChanged(this, userViewModel,true);
+
+                //Clients.Caller.SendAsync("getProfileInfo", user.FullName, user.Avatar);
+                await Clients.Caller.SendAsync("getProfileInfo", userViewModel);
             }
             catch (Exception ex)
             {

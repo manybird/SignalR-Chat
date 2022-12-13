@@ -10,8 +10,6 @@ $(document).ready(function () {
     const PathBase = $('#hiddenPathBase').val();
     
     var connection = new signalR.HubConnectionBuilder().withUrl(`${PathBase}/chatHub?na1ta=${na1ta}`).build();
-    
-    var connection = new signalR.HubConnectionBuilder().withUrl(`/chatHub?na1ta=${na1ta}`).build();
 
     connection.start().then(function () {
         console.log('SignalR connection Started...')
@@ -200,7 +198,9 @@ $(document).ready(function () {
             });
         }
 
-        self.roomList = function () {
+        self.roomList = function () {         
+            console.log('room list url: ' + PathBase);
+            var u = PathBase + `/api/Rooms/ByAdminId/${self.adminId()}`;
             console.log('room list url: ' + u);
             fetch(u).then(response => response.json())
             .then(data => {
@@ -240,6 +240,7 @@ $(document).ready(function () {
 
         self.createRoom = function () {
             var roomName = $("#roomName").val();
+            fetch(PathBase + '/api/Rooms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: roomName,operationMode:0 })
@@ -249,6 +250,7 @@ $(document).ready(function () {
         self.editRoom = function () {
             var roomId = self.joinedRoomId();
             var roomName = $("#newRoomName").val();
+            fetch(PathBase + '/api/Rooms/' + roomId, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: roomId, name: roomName })
@@ -256,6 +258,7 @@ $(document).ready(function () {
         }
 
         self.deleteRoom = function () {
+            fetch(PathBase + '/api/Rooms/' + self.joinedRoomId(), {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: self.joinedRoomId() })
@@ -265,6 +268,7 @@ $(document).ready(function () {
         self.deleteMessage = function () {
             var messageId = $("#itemToDelete").val();
 
+            fetch(PathBase + '/api/Messages/' + messageId, {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: messageId })
@@ -272,6 +276,7 @@ $(document).ready(function () {
         }
 
         self.messageHistory = function () {
+            const url = PathBase + `/api/Messages/RoomB/${self.joinedRoom()}/${self.caseId()}`;
             fetch(url) //+'/5'
                 .then(response => response.json())
                 .then(data => {
@@ -343,6 +348,7 @@ $(document).ready(function () {
             var form = document.getElementById("uploadForm");
             $.ajax({
                 type: "POST",
+                url: PathBase + '/api/Upload/ByAgent/' + self.na1ta(),
                 data: new FormData(form),
                 contentType: false,
                 processData: false,

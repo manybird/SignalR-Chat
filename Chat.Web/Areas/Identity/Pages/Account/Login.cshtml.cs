@@ -16,8 +16,10 @@ using Microsoft.AspNetCore.Server.HttpSys;
 using System.Web;
 using System.Collections.Specialized;
 using Microsoft.AspNetCore.Mvc.Filters;
+
 using Chat.Web.Data;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace Chat.Web.Areas.Identity.Pages.Account
 {
@@ -26,6 +28,7 @@ namespace Chat.Web.Areas.Identity.Pages.Account
     public class LoginModel : PageModel
     {
         public class InputModel
+
         {
             [Required]
             [Display(Name = "Username")]
@@ -38,6 +41,9 @@ namespace Chat.Web.Areas.Identity.Pages.Account
             [Display(Name = "Remember me?")]
             public bool RememberMe { get; set; }
         }
+
+       
+
 
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
@@ -65,19 +71,37 @@ namespace Chat.Web.Areas.Identity.Pages.Account
         [TempData]
         public string ErrorMessage { get; set; }
 
-        public class InputModel
+        private static NameValueCollection GetParameters(string returnUrl)
         {
-            [Required]
-            [Display(Name = "Username")]
-            public string UserName { get; set; }
+            var s = returnUrl;
+            if (s == null) return null;
+            if (s.StartsWith(@"/?"))
+            {
+                s = s[1..] ;
+            }
 
-            [Required]
-            [DataType(DataType.Password)]
-            public string Password { get; set; }
-
-            [Display(Name = "Remember me?")]
-            public bool RememberMe { get; set; }
+            return HttpUtility.ParseQueryString(s);
         }
+        
+        private static string GetUserNameInUrl(string returnUrl)
+        {            
+            var qs = GetParameters(returnUrl);
+
+            if (qs == null) return null;            
+            return qs["na1ta"];
+                        
+
+            //var arr = returnUrl.Split("na1ta=");
+            //if (arr.Length < 2) return null;
+
+            //var decodedUrl = System.Net.WebUtility.UrlDecode(arr[1]);
+            //if (decodedUrl == null) return null;
+            //var arr2 = decodedUrl.Split("nata=");
+            //if (arr2.Length < 2) return null;
+
+            //return arr[1];
+        }
+
 
 
        

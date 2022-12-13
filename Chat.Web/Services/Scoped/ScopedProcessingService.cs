@@ -208,7 +208,9 @@ namespace Chat.Web.Services.Scoped
 
                 if (responseResult.IsSuccess)
                 {
-                    var newConversation = responseResult;                                       
+                    var newConversation = responseResult;
+
+                    
 
                     if (IsConversationStateChanged(newConversation, c.ConnectionId))
                     {

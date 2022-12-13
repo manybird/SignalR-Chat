@@ -149,6 +149,8 @@ namespace Chat.Web.MiccSdk
             return result;
         }
 
+
+
         public async Task<ResponseResultOpenMediaConversation> PostOpenMediaConversation(string chatId, string caseId, string name, string email)
         {
             var result = new ResponseResultOpenMediaConversation();

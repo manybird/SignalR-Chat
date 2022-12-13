@@ -149,18 +149,6 @@ namespace Chat.Web
                 endpoints.MapControllers();
                 endpoints.MapHub<ChatHub>("/chatHub");
             });
-
-            try
-            {
-                AppDbContextSeedData.InitDbAndSeedData(app.ApplicationServices).Wait();
-            }catch(Exception ex)
-            {
-                Startup.ex = ex;
-            }
-            
-
-            //MonitorWorker.Run(app.ApplicationServices);
-
         }
     }
 }

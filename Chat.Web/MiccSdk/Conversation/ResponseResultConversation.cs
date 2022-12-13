@@ -101,7 +101,7 @@ namespace Chat.Web.MiccSdk.Conversation
         public DateTime? LastAgentActionDate { get; set; }
         
         public DateTime? TimeOfLastCustomerResponse { get; set; }
-
+                   
         public static string IN_QUEUE_KEY = "InQueue";
 
         public bool IsInQueue()

@@ -53,7 +53,9 @@ namespace Chat.Web.Controllers
         {   
             var room = _context.Rooms.FirstOrDefault(r => r.AdminId== messageView.AdminId);
             if (room == null) return BadRequest("Room not found");
-            
+
+                      
+
             var runner = new MiccRunner(_micc);
 
 

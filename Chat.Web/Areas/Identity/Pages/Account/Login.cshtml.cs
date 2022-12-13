@@ -65,35 +65,18 @@ namespace Chat.Web.Areas.Identity.Pages.Account
         [TempData]
         public string ErrorMessage { get; set; }
 
-        private static NameValueCollection GetParameters(string returnUrl)
+        public class InputModel
         {
-            var s = returnUrl;
-            if (s == null) return null;
-            if (s.StartsWith(@"/?"))
-            {
-                s = s[1..] ;
-            }
+            [Required]
+            [Display(Name = "Username")]
+            public string UserName { get; set; }
 
-            return HttpUtility.ParseQueryString(s);
-        }
-        
-        private static string GetUserNameInUrl(string returnUrl)
-        {            
-            var qs = GetParameters(returnUrl);
+            [Required]
+            [DataType(DataType.Password)]
+            public string Password { get; set; }
 
-            if (qs == null) return null;            
-            return qs["na1ta"];
-                        
-
-            //var arr = returnUrl.Split("na1ta=");
-            //if (arr.Length < 2) return null;
-
-            //var decodedUrl = System.Net.WebUtility.UrlDecode(arr[1]);
-            //if (decodedUrl == null) return null;
-            //var arr2 = decodedUrl.Split("nata=");
-            //if (arr2.Length < 2) return null;
-
-            //return arr[1];
+            [Display(Name = "Remember me?")]
+            public bool RememberMe { get; set; }
         }
 
 

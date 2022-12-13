@@ -31,6 +31,21 @@
 }
 
 
+@if (!string.IsNullOrEmpty( Model.AdminId))
+{
+    <p>
+        <strong>Admin ID:</strong> <code>@Model.AdminId</code>
+        <strong>ID2:</strong> <code>@Model.Id2</code>
+    </p>
+}
+
+@foreach (var item in Model.Items)
+{
+    <div>
+        @item        
+    </div>
+}
+
 <h3>Development Mode</h3>
 <p>
     Swapping to the <strong>Development</strong> environment displays detailed information about the error that occurred.
